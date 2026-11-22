@@ -1,0 +1,19 @@
+[project]
+name = "aetherdesk"
+version = "0.1.0"
+description = "Desktop web privado para ambientes Linux individuais"
+requires-python = ">=3.11"
+dependencies = [
+  "argon2-cffi>=25.1,<26",
+  "docker>=7.1,<8",
+  "fastapi>=0.117,<1",
+  "psutil>=7.1,<8",
+  "uvicorn>=0.37,<1",
+  "websockets>=15,<17"
+]
+
+[tool.uv]
+package = false
+
+[dependency-groups]
+dev = ["httpx>=0.28,<1"]

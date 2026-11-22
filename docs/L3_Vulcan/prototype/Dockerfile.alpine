@@ -1,0 +1,4 @@
+FROM alpine:3.20
+RUN ln -s /persist/dados.txt /dados.txt
+USER 10001:10001
+CMD ["sh"]

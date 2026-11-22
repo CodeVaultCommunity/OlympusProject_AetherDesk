@@ -1,0 +1,12 @@
+.uv-cache/
+.reference-vulcan/
+.venv/
+.local/
+.local-demo/
+.wop/wop.sqlite3
+*.sqlite3
+__pycache__/
+*.pyc
+web/node_modules/
+web/dist/
+.pytest_cache/

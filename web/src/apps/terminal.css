@@ -1,0 +1,10 @@
+.terminal-app { display:flex; flex-direction:column; width:100%; height:100%; min-height:0; background:#0b1020; color:#e5e9f2; }
+.terminal-toolbar,.terminal-tabs { display:flex; align-items:center; gap:6px; padding:6px 9px; border-bottom:1px solid #334055; }
+.terminal-toolbar span { margin-left:auto; font-size:11px; color:#9eacc5; }
+.terminal-toolbar button,.terminal-tabs button { border:1px solid #40516c; border-radius:5px; background:#19243a; color:#e5e9f2; padding:5px 9px; cursor:pointer; }
+.terminal-toolbar button:disabled { opacity:.4; cursor:default; }
+.terminal-tabs { overflow:auto; flex-shrink:0; }
+.terminal-tabs button.selected { border-color:#54a7ff; background:#163b65; }
+.terminal-mount { flex:1; min-height:0; padding:6px; overflow:hidden; }
+.terminal-mount .xterm { height:100%; }
+.terminal-empty { display:grid; place-items:center; flex:1; color:#9eacc5; }

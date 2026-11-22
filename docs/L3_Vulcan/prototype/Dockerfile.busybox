@@ -1,0 +1,4 @@
+FROM busybox:1.36.1
+RUN ln -s /persist/dados.txt /dados.txt
+USER 10001:10001
+CMD ["sh"]
