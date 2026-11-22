@@ -1,7 +1,7 @@
 ---
 artifact: wop-wave-prompt
 plan_id: a47c4d01-5e49-4b24-aaaf-2535f78447e0
-plan_version: 2
+plan_version: 3
 plan_title: "Implementar o AetherDesk com organização Vulcan"
 wave_id: W003
 authorized_items: "I005,I006,I007,I008"
@@ -10,7 +10,7 @@ predecessor_waves: W002
 blocked_successor_waves: W004
 language: pt-BR
 source_readme: README.md
-source_readme_sha256: 58690bbdbb9486101f0a21f6c3759c8be4abac840a930910d7221140739b0fa6
+source_readme_sha256: 1f545b5dff422620fb80817b5cac9e3d1b6d32db6d7a65559bde8ea1e3e9d922
 ---
 
 # Onda W003 — Aplicativos e painéis
@@ -255,7 +255,7 @@ Publicar interfaces versionadas de contexto autenticado, repositório de contas,
 <!-- wop:prompt-section shared_context -->
 ## Resultado <!-- wop:section outcome -->
 
-Entregar uma primeira versão funcional do AetherDesk: desktop web privado para um servidor Linux, com contas e ambientes individuais, Explorador, editor, terminais Bash, monitoramento e administração. O pacote de entrega inclui código, contratos, testes, instalação reproduzível em Linux, procedimentos de restauração e evidências dos 14 cenários de aceite descritos abaixo. Este plano prepara uma implantação verificável em ambiente de homologação; a ativação em um servidor de produção é uma ação externa separada.
+Entregar uma primeira versão funcional do AetherDesk, destinada a um servidor Linux e homologada localmente em uma distribuição WSL 2 descartável: desktop web privado com contas e ambientes individuais, Explorador, editor, terminais Bash, monitoramento e administração. O pacote inclui código, contratos, testes, artefatos de instalação Linux, procedimentos de restauração e evidências dos 14 cenários de aceite descritos abaixo. A homologação local conclui este plano; validar boot, rede, segurança operacional e capacidade de um servidor Linux independente e ativar produção são trabalho posterior, sem alegação de que o WSL os comprovou.
 
 ## Contexto de execução <!-- wop:section execution_context -->
 
@@ -267,19 +267,21 @@ O diretório `E:\Alkimim\Projetos\CodeVault\AetherDesk` estava sem arquivos de a
 - F002: A cópia local Vulcan Stable-v1.0.0 organiza exemplos em `apps/<App>/`, `docs/L3_Vulcan/` e um mecanismo explícito de entrada; seus exemplos usam `entities/`, `usecases/`, `tools/`, `boundaries/` e `composition/`. Fonte: `versioning/Stable-v1.0.0/README.md` e `examples/minimal/`, inspecionados em 22/11/2026.
 - F003: A conformidade formal dessa edição exige uma árvore Minerva completa e mapeamentos módulo→arquivo/símbolo em `realization.json`. AetherDesk, por escolha explícita de escopo, não alegará conformidade formal nem criará um ledger Minerva fictício. Fonte: `AGENTS.md` e `versioning/Stable-v1.0.0/README.md` locais.
 - F004: O texto inicial propõe React/TypeScript, Monaco, xterm.js e runtime de isolamento, mas não fixa implementação nem políticas de ciclo de vida, ferramentas ou cópias de segurança. Fonte: texto de requisitos fornecido pelo usuário.
+- F005: Em 22/11/2026, o responsável informou que não há host Linux independente, pediu homologação no WSL deste PC e autorizou adaptar o plano para concluir a versão local sem aguardar esse host. `wsl --list --verbose` não encontrou distribuição instalada; W004 inclui provisionar uma distribuição descartável.
 
 ## Escopo <!-- wop:section scope -->
 
 ### Incluído
 
 - Aplicação `apps/AetherDesk/` com núcleo Python organizado pelas responsabilidades Vulcan; interface React/TypeScript em `web/`, tratada como adaptador de interação; `launch.py` ou entrada equivalente com registro explícito; documentação de decisões e evidências em `docs/L3_Vulcan/`.
-- Primeira configuração, login, sessões, papéis Administrador/Membro, permissões individuais, provisionamento e isolamento de ambientes, arquivos, editor, terminais, monitor, painel administrativo, preferências, auditoria, instalação Linux com HTTPS e início automático, backup/restauração e testes.
-- Ambiente de homologação Linux com runtime de isolamento e dados de teste; artefatos de implantação para um servidor de produção, sem efetuar a implantação remota nesta execução do plano.
+- Primeira configuração, login, sessões, papéis Administrador/Membro, permissões individuais, provisionamento e isolamento de ambientes, arquivos, editor, terminais, monitor, painel administrativo, preferências, auditoria, instalação na distribuição WSL 2 com HTTPS local e início por systemd na abertura da distribuição, backup/restauração e testes.
+- Distribuição WSL 2 descartável com runtime de isolamento e dados de teste; artefatos de implantação para um servidor Linux independente, sem efetuar essa implantação nesta execução do plano.
 
 ### Excluído
 
 - Modelos, árvores, geradores e declarações de conformidade Atlas/Minerva; alterações no repositório Olympus/Vulcan.
 - Compartilhamento entre contas, lixeira, IDE com extensões/depuração, proxy de aplicações web dos usuários, GPU, histórico longo de métricas, acesso administrativo implícito a arquivos/terminais alheios e controle de processos pelo monitor.
+- Comprovação de boot automático, certificado público, acesso de rede externo, quotas e carga representativa de um servidor Linux independente; esses resultados pertencem à validação posterior do host alvo e não podem ser inferidos do WSL.
 
 ## Partes interessadas e autoridade <!-- wop:section stakeholders -->
 
@@ -302,7 +304,7 @@ O diretório `E:\Alkimim\Projetos\CodeVault\AetherDesk` estava sem arquivos de a
 - R008: Monitor distingue servidor, ambiente pessoal, outros ambientes e consumo compartilhado; CPU, RAM, armazenamento, I/O, rede e estado são apresentados com unidade, referência, atualização e indisponibilidade.
 - R009: Administração expõe CRUD de contas, permissões efetivas, estado/falhas dos ambientes, revogar sessão e parar sessão como ações distintas, recuperação e confirmação de impacto.
 - R010: Contas, permissões, preferências e arquivos persistem após reinício e atualização; backup é configurável no sistema, desativado por padrão, com frequência, destino e retenção por prazo ou substituição, e restauração verificável.
-- R011: Serviço inicia no Linux após boot, usa HTTPS e separa segredos dos diretórios de trabalho dos usuários.
+- R011: Esta versão entrega unidade systemd e configuração HTTPS para Linux, demonstra no WSL o início do serviço quando a distribuição é aberta, HTTPS local e segredos fora dos diretórios de usuários. O requisito original de início após boot de servidor Linux independente permanece fora do aceite desta versão e exige validação posterior no host alvo.
 - R012: Eventos administrativos registram ator, operação, alvo e instante sem capturar conteúdo de arquivos ou terminais.
 - R013: Interface expõe carregamento, salvamento, falha, desconexão e reconexão; tema, janelas abertas e suas posições persistem e são restaurados após novo login.
 - R014: A primeira versão demonstra os 14 comportamentos de aceite do texto inicial, inclusive isolamento de dois usuários, duas sessões simultâneas da mesma conta, persistência, autorização negativa e restrições válidas no terminal.
@@ -313,25 +315,28 @@ O diretório `E:\Alkimim\Projetos\CodeVault\AetherDesk` estava sem arquivos de a
 - C002: Cada operação usa identidade autenticada obtida do servidor; IDs e caminhos enviados pelo navegador não definem propriedade ou raiz.
 - C003: Restrições de dados que devem valer para qualquer programa são impostas pelo ambiente e sistema de arquivos, além da API; ocultar um botão não basta.
 - C004: Nunca usar comandos ou arquivos pessoais de usuários como registro administrativo básico.
+- C005: Evidência WSL deve identificar distribuição, versão, daemon Docker e limites de rede, ciclo de vida e desempenho; não será apresentada como evidência de servidor independente. Usar somente contas, volumes, bancos e certificados de teste descartáveis.
 
 ## Decisões <!-- wop:section decisions -->
 
 - D001: AetherDesk é uma aplicação independente que adota a organização Vulcan; sua fonte de requisitos é este plano, não um módulo Minerva. Não gerar `realization.json` ou `knowledge-graph.json` com linhagem Minerva inventada. Revisitar somente se o escopo incluir Minerva.
 - D002: Usar um único registro de composição do backend e contratos explícitos entre núcleo, infraestrutura e adaptadores. `Boundary` nomeia apenas entrada HTTP/WebSocket; casos de uso autorizam o contexto confiável antes de causar efeitos. Revisitar se a edição remota verificada mudar essas regras.
 - D003: Separar dados persistentes de imagem/base recriável; preservar arquivos na desativação e exclusão lógica. Logout e revogação não param processos; parada de sessão e exclusão os encerram. I001 fixa os contratos.
+- D004: Por decisão do responsável em 22/11/2026, o aceite deste pacote é técnico e funcional por critérios observáveis em WSL 2, registrados por quem executa e revisa a evidência; não depende de assinatura humana adicional nem de um host ainda inexistente. Isso não constitui aceite de implantação em produção. Rever quando houver host alvo.
 
 ## Premissas <!-- wop:section assumptions -->
 
-- A001: Um único servidor Linux atende o grupo privado na primeira versão. O protótipo W001 usa Docker Desktop com daemon Linux; W004 requer host Linux de homologação identificado para instalação e medições finais.
+- A001: Um único servidor Linux continua sendo o destino do produto. W004 usa WSL 2 local como ambiente de homologação desta versão; medições e serviço nessa distribuição não demonstram boot nem desempenho do servidor independente.
 - A002: O backend será Python para preservar diretamente a estrutura e os contratos de código demonstrados em Vulcan; o frontend será React/TypeScript como adaptador web. W001 confirma compatibilidade com o ambiente e registra qualquer adaptação antes de W002.
 - A003: A primeira versão usa monitoramento atual e uma janela curta de amostras em memória. Persistência de histórico só entra por revisão do plano.
 
 ## Incógnitas <!-- wop:section unknowns -->
 
 - U001: Resolvida em W001 para o commit remoto `4ab5824a7c7c962e96ac4480e8c254d023ba75df` e os 177 arquivos rastreados da edição Stable-v1.0.0; I001 registra limites da comparação e da adaptação.
-- U002: O protótipo em Docker Linux demonstrou raiz pessoal e persistência, mas runtime, ferramentas, quotas e capacidade do host de homologação final ainda exigem validação. Falha de isolamento bloqueia o portão.
+- U002: O protótipo em Docker Linux demonstrou raiz pessoal e persistência. W004 repetirá isolamento, ferramentas e ciclo de vida no WSL; quotas e capacidade do servidor independente permanecem pendências explicitamente transferidas para a validação do host alvo. Falha de isolamento no WSL bloqueia este portão.
 - U003: Resolvida pelo responsável em 22/11/2026: logout e revogação administrativa de sessão não param processos, PTYs ou desktop; novo login restaura janelas e posições. Parar sessão cancela processos. Excluir usuário para processos e preserva arquivos. I001 formaliza transições.
 - U004: Resolvida pelo responsável em 22/11/2026: backup é configurável na aplicação e desativado por padrão; frequência, destino e retenção por prazo ou substituição são escolhas administrativas. O destino de teste para homologação será definido em W004.
+- U005: Ainda não há distribuição WSL instalada. I009 verifica versão, virtualização, privilégios e acesso ao pacote da distribuição; instala uma distribuição descartável quando possível e registra qualquer dependência inevitável de reinício ou acesso externo. Não substitui prova ausente por simulação.
 
 ## Riscos <!-- wop:section risks -->
 
@@ -342,11 +347,11 @@ O diretório `E:\Alkimim\Projetos\CodeVault\AetherDesk` estava sem arquivos de a
 | Credenciais ou tokens expostos em logs/terminal | Média | Alto | Armazenamento fora dos ambientes e redação de logs | Testes de vazamento e revisão de auditoria | Implementação de identidade |
 | Corrida no primeiro acesso ou revogação tardia | Média | Alto | Provisionamento idempotente e checagem contínua de autorização | Testes concorrentes e de WebSocket aberto | Integração |
 | Referência Vulcan local diverge do remoto | Média | Médio | Fixar identidade da fonte em W001 e limitar alegação arquitetural | Comparação de edição, estado e hashes | Responsável técnico |
-| Host de homologação não suporta isolamento/medição esperados | Média | Alto | Protótipo W001 e métricas com indisponibilidade explícita | Gate de capacidade antes de W002 | Operação |
+| WSL difere do servidor alvo em boot, Docker, rede, permissões ou desempenho | Alta | Alto | Ambiente WSL descartável, evidência rotulada por ambiente e transferência explícita das provas do host | Comparar runbook, fontes de métricas, TLS e ciclo de vida com o contrato do servidor | Operação |
 
 ## Ambientes e operação <!-- wop:section operations -->
 
-Desenvolvimento usa dados fictícios e testes sem privilégios do hospedeiro. Homologação usa Linux com runtime de isolamento, TLS de teste, armazenamento persistente isolado, contas de teste e coleta de métricas. Produção, quando autorizada separadamente, recebe configuração própria, segredos fora dos volumes dos usuários, início automático, HTTPS, política de backup e runbook. W001 registra versões do SO/runtime e capacidade; W004 documenta instalação, atualização, reversão, restauração, logs, métricas e diagnóstico. Testes destrutivos ou de fuga rodam apenas em ambiente descartável autorizado, nunca em dados reais.
+Desenvolvimento usa dados fictícios e testes sem privilégios do hospedeiro. Homologação deste pacote usa uma distribuição WSL 2 descartável, com systemd, runtime de isolamento, TLS local de teste, armazenamento no filesystem Linux da distribuição, contas de teste e coleta de métricas. Registrar se o daemon Docker é integrado ao Docker Desktop ou nativo; não tratar um como prova do outro. Produção, quando autorizada separadamente, recebe configuração própria, segredos fora dos volumes dos usuários, início automático após boot real, HTTPS, política de backup e runbook. W004 documenta instalação, atualização, reversão, restauração, logs, métricas e diagnóstico no WSL. Testes destrutivos ou de fuga rodam apenas nos dados e recursos descartáveis criados para o ensaio, nunca em dados reais.
 
 ## Contratos globais <!-- wop:section global_contracts -->
 
@@ -378,14 +383,14 @@ Desenvolvimento usa dados fictícios e testes sem privilégios do hospedeiro. Ho
 | R008 | Texto inicial §8 | I007, I009 | Monitor | Atribuição, unidades e visibilidade | Consumo confiável |
 | R009 | Texto inicial §10 e decisão de 22/11/2026 | I002, I003, I008, I009 | Administração | CRUD, revogação distinta de parada | Operação de contas |
 | R010 | Texto inicial §11 e decisão de 22/11/2026 | I001, I003, I008, I009 | Volumes/backup | Padrão desativado, configuração, retenções, reinício e restauração | Dados recuperáveis |
-| R011 | Texto inicial §11 | I001, I009 | Serviço/TLS | Boot e inspeção de segredos | Instalação Linux |
+| R011 | Texto inicial §11 e decisão de escopo de 22/11/2026 | I001, I009 | Unidade systemd, proxy TLS e runbook Linux | Reabertura do WSL inicia serviço; HTTPS local e segregação de segredos; boot de servidor independente explicitamente pendente | Versão local instalável; produção condicionada à prova posterior no host |
 | R012 | Texto inicial §11 | I002, I008, I009 | Auditoria | Evento ator/operação/alvo/hora e ausência de conteúdo | Responsabilização |
 | R013 | Texto inicial §2 e decisão de 22/11/2026 | I004, I008, I009 | Estados/preferências | Janelas e posições restauradas após novo login | Continuidade da experiência |
-| R014 | Texto inicial §13 | I001–I009 | Matriz e2e | 14 cenários em homologação | Aceite funcional |
+| R014 | Texto inicial §13 e decisão de escopo de 22/11/2026 | I001–I009 | Matriz e2e | 14 cenários na distribuição WSL 2 | Aceite funcional da versão local |
 
 ## Estratégia de verificação <!-- wop:section verification_strategy -->
 
-Executar verificações estáticas e testes unitários para regras puras; integração para banco, filesystem, runtime e PTY; contratos para Boundary/casos de uso/cliente; e2e para jornadas críticas em Linux. Fixtures isolam conta, banco, volume, porta, tempo e métricas por item. Cenários de falha incluem gravação de resultado desconhecido, provisionamento concorrente, quota/armazenamento indisponível, perda de conexão, revogação e restauração. O orçamento de desempenho é definido em W001 com número de usuários, volume de arquivos, sessões e intervalo de coleta; W004 mede percentis e consumo no host identificado. Nenhum teste simulado substitui a prova Linux de `/` e de processos.
+Executar verificações estáticas e testes unitários para regras puras; integração para banco, filesystem, runtime e PTY; contratos para Boundary/casos de uso/cliente; e2e para jornadas críticas na distribuição WSL 2. Fixtures isolam conta, banco, volume, porta, tempo e métricas por item. Cenários de falha incluem gravação de resultado desconhecido, provisionamento concorrente, quota/armazenamento indisponível, perda de conexão, revogação e restauração. O orçamento de desempenho proposto em W001 define número de usuários, volume de arquivos, sessões e intervalo de coleta; W004 confirma metas locais antes de medir percentis e consumo no WSL. Nenhum teste simulado substitui a prova Linux de `/` e de processos; nenhuma medição WSL substitui a medição no servidor futuro.
 
 ## Reversão e recuperação <!-- wop:section rollback_recovery -->
 
@@ -394,9 +399,9 @@ Antes de migração ou atualização, criar cópia verificável de banco, config
 ## Aceite final <!-- wop:section final_acceptance -->
 
 - Todos os portões W001–W004 passaram em ordem e cada item tem evidência real identificada.
-- R001–R014 estão demonstrados; os 14 cenários da primeira versão passaram em Linux e as telas de login, desktop, Explorador, editor, terminal, monitores, administração e configurações foram inspecionadas.
-- Isolamento, autorização, persistência, HTTPS, início automático, backup/restauração e orçamento de carga passaram; falhas ou limitações residuais são explícitas.
-- O responsável pelo produto registra aceite funcional sobre a evidência; execução técnica e aceite humano mantêm estados distintos.
+- R001–R010 e R012–R014 estão demonstrados na distribuição WSL 2; R011 está demonstrado apenas no recorte local declarado. Os 14 cenários passaram no WSL e as telas de login, desktop, Explorador, editor, terminal, monitores, administração e configurações foram inspecionadas.
+- Isolamento, autorização, persistência, HTTPS local, início após abertura da distribuição, backup/restauração e orçamento de carga local passaram; falhas ou limitações residuais são explícitas. Boot, certificado público, rede, quotas e capacidade do servidor independente constam como requisitos de uma validação posterior antes de produção.
+- O executor registra avaliação técnica e funcional contra os critérios observáveis, com evidência e ator identificados; nenhum aceite humano adicional é requisito deste pacote. Aceite para produção permanece separado.
 
 ## Cenários funcionais de aceite <!-- wop:section functional_scenarios -->
 

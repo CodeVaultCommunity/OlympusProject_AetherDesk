@@ -1,12 +1,12 @@
 # W004 — integração e homologação (portão pendente)
 
-Data: 22/11/2026. I009 foi implementado e verificado **localmente em Docker Linux sobre Windows**. O portão W004 **não passou**, pois o responsável informou que ainda não há host Linux descartável de homologação. Não há evidência de boot/systemd, TLS com domínio/certificado real, carga no host alvo ou aceite funcional humano.
+Data: 22/11/2026. I009 foi implementado e verificado **localmente em Docker Linux sobre Windows**. Na versão 3 do plano WOP, o responsável transferiu a homologação conclusiva deste pacote para uma distribuição WSL 2 descartável neste PC. O portão W004 **ainda não passou**: não há distribuição WSL instalada nem evidência de instalação, systemd, HTTPS local, restauração agendada e carga nesse ambiente. Boot, certificado público, rede e capacidade de um servidor independente pertencem à validação posterior, antes da produção.
 
 ## Matriz funcional local
 
 Comando: `AETHERDESK_DOCKER_TEST=1 uv run python -m unittest apps.AetherDesk.composition.test_scenarios_local -v`. Resultado: `Ran 1 test ... OK` (41,849 s) em Docker Engine Linux 28.3.3; todos os checkpoints abaixo são `assert` da mesma jornada, com contêineres e volumes descartáveis.
 
-| Cenário | Procedimento/evidência local | Resultado local | Host Linux |
+| Cenário | Procedimento/evidência local | Resultado local | WSL 2 |
 |---|---|---|---|
 | S01 | POST administrativo cria Alice; broker informa ambiente `running`. | Passou | Pendente |
 | S02 | Alice e Bob entram na mesma aplicação com UUID/volume distintos. | Passou | Pendente |
@@ -44,4 +44,4 @@ Comando: `AETHERDESK_DOCKER_TEST=1 uv run python -m unittest apps.AetherDesk.com
 
 ## Decisão do portão
 
-**Pendente.** Repetir S01–S14 e os ensaios de TLS, boot, backup/restore, segurança e carga em host Linux de homologação identificado; corrigir falhas; registrar orçamento de desempenho e aceite funcional do responsável. A WOP permanece `in_progress` / `not_evaluated`; produção não foi ativada.
+**Pendente.** Provisionar WSL 2, repetir S01–S14 e os ensaios de HTTPS local, início por systemd após reabrir a distribuição, backup agendado/restauração, segurança, atualização/reversão e carga; corrigir falhas e registrar aceite técnico com critérios observáveis. A WOP permanece `in_progress` / `not_evaluated`. As provas de boot, rede, quotas e desempenho de um servidor independente continuam pendentes para a etapa de implantação futura; produção não foi ativada.
