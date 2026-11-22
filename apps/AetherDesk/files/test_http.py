@@ -32,6 +32,8 @@ class FileHttpTests(unittest.TestCase):
                     admin_csrf = administrator.cookies.get('aether_csrf')
                     identity = IdentityService(os.path.join(temp, 'identity.sqlite3'), 'bootstrap-secret-long')
                     admin = identity.actor(administrator.cookies.get('aether_session'))
+                    admin_env = identity.account(admin, admin.account_id)['environment_id']
+                    resources.append(DockerEnvironmentBroker._names(admin_env))
                     for name, client in (('alice', alice), ('bobby', bob)):
                         created = administrator.post('/api/v1/admin/accounts', json={'username': name,
                             'password': 'strong-member-password', 'role': 'member'},

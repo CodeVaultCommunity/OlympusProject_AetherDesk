@@ -1,6 +1,6 @@
 # Arquitetura proposta — W001/I001
 
-Estado em 22/11/2026: **contrato técnico W001 aprovado para W002**. As políticas de processos e backup foram definidas pelo responsável. O host Linux final será identificado e testado em W004. Fonte arquitetural e limites de comprovação: [source-and-prototype.md](source-and-prototype.md).
+Estado em 22/11/2026: **contrato técnico W001 aprovado para W002**. As políticas de processos e backup foram definidas pelo responsável. A revisão v3 do plano transferiu a homologação deste pacote para WSL 2; o host Linux independente será identificado e testado antes de produção, fora deste portão W004. Fonte arquitetural e limites de comprovação: [source-and-prototype.md](source-and-prototype.md).
 
 ## Adaptação Vulcan
 
@@ -22,4 +22,4 @@ Backup é configurável na aplicação e vem desativado. O administrador escolhe
 
 ## Perfil de carga provisório para W004
 
-Alvo inicial de medição: 20 contas cadastradas, 8 usuários simultâneos, até 4 PTYs por usuário, 10.000 arquivos por ambiente e 2 GiB persistentes por conta; amostragem de métricas a cada 5 s, janela de 5 min em memória. Medir no host Linux alvo identificado, com 8 vCPU e 16 GiB RAM como capacidade mínima proposta. Metas sob esse perfil: login p95 < 1 s; listagem de 100 itens p95 < 500 ms; abertura de arquivo de até 1 MiB p95 < 1 s; eco de PTY p95 < 150 ms; coleta de métricas < 2% de CPU do host. Estes valores são orçamento a validar, não resultados medidos. Host inferior ou política diferente exige revisão antes do gate W004.
+Alvo inicial de medição: 20 contas cadastradas, 8 usuários simultâneos, até 4 PTYs por usuário, 10.000 arquivos por ambiente e 2 GiB persistentes por conta; amostragem de métricas a cada 5 s, janela de 5 min em memória. Capacidade mínima proposta para o servidor independente: 8 vCPU e 16 GiB RAM. Metas sob esse perfil: login p95 < 1 s; listagem de 100 itens p95 < 500 ms; abertura de arquivo de até 1 MiB p95 < 1 s; eco de PTY p95 < 150 ms; coleta de métricas < 2% de CPU do host. São propostas, não resultados medidos nem orçamento automaticamente aceito. W004 define e mede um perfil local WSL identificado; a medição no servidor independente continua necessária antes de produção.

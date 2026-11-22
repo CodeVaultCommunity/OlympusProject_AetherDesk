@@ -3,6 +3,7 @@
 .venv/
 .local/
 .local-demo/
+.local-wsl/
 .wop/wop.sqlite3
 *.sqlite3
 __pycache__/

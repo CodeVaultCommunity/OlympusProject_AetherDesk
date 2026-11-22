@@ -1,19 +1,19 @@
 ---
 artifact: wop-wave-prompt
 plan_id: a47c4d01-5e49-4b24-aaaf-2535f78447e0
-plan_version: 3
+plan_version: 4
 plan_title: "Implementar o AetherDesk com organização Vulcan"
-wave_id: W004
-authorized_items: I009
-non_authorized_items: "I001,I002,I003,I004,I005,I006,I007,I008"
-predecessor_waves: W003
-blocked_successor_waves: none
+wave_id: W002
+authorized_items: "I002,I003,I004"
+non_authorized_items: "I001,I005,I006,I007,I008,I009"
+predecessor_waves: W001
+blocked_successor_waves: "W003,W004"
 language: pt-BR
 source_readme: README.md
-source_readme_sha256: 1f545b5dff422620fb80817b5cac9e3d1b6d32db6d7a65559bde8ea1e3e9d922
+source_readme_sha256: b04889ec9885f3cea62a1ec0ee02f75fc1d25474707fae93187230f3dc448540
 ---
 
-# Onda W004 — Integração e homologação
+# Onda W002 — Fundações do produto
 
 <!-- wop:prompt-section global_protocol -->
 ## Protocolo de execução <!-- wop:section execution_protocol -->
@@ -21,162 +21,169 @@ source_readme_sha256: 1f545b5dff422620fb80817b5cac9e3d1b6d32db6d7a65559bde8ea1e3
 Identifique o pacote e leia `README.md` e todos os prompts de onda referenciados. Execute as ondas em ordem estrita; não avance antes de todos os itens da onda concluírem, serem aceitos individualmente, integrados quando necessário e de o portão passar. Integre resultados, registre evidências e transições de estado, bloqueie mudanças de escopo ou efeitos externos não autorizados e avalie o aceite final. Use somente o paralelismo cuja independência esteja demonstrada na onda correspondente.
 
 <!-- wop:prompt-section execution_scope -->
-<!-- wop:prompt-assigned-wave W004 -->
+<!-- wop:prompt-assigned-wave W002 -->
 ### Objetivo geral <!-- wop:field general_objective -->
 
-Integrar o produto, validar segurança e recuperação e demonstrar instalação reproduzível na distribuição WSL 2 local, com evidência de aceite técnico e funcional desta versão.
+Construir fundações verificadas e independentes para identidade, runtime pessoal e desktop, usando apenas os contratos aceitos em W001.
 
 ### Requisitos atendidos <!-- wop:field requirements_addressed -->
 
-- R001–R014.
+- R001, R002, R003, R004, R010, R012, R013.
 
 ### Instruções de execução da onda <!-- wop:field execution_instructions -->
 
-Execute apenas I009 após verificar o portão W003. Provisione a distribuição WSL 2 descartável, integre todos os módulos, teste nela, registre resultados e avalie os critérios funcionais observáveis sem aguardar um host externo. Se a instalação exigir reinício do Windows, preserve estado e retome após o reinício; não declare prova não executada. Não trate produção como parte automaticamente autorizada desta onda.
+Execute apenas I002, I003 e I004 com fixtures isoladas. Aceite cada item separadamente, depois integre exports no portão e verifique contratos congelados. Não inicie módulos funcionais posteriores.
 
 ### Justificativa de paralelismo <!-- wop:field parallelism_rationale -->
 
-Item único: integração, segurança, instalação e recuperação compartilham composição, dados e ambiente de homologação; fragmentar criaria interferência.
+I002 escreve somente `apps/AetherDesk/identity/`, casos/entidades/ferramentas de conta e migração de identidade; I003 escreve somente runtime e fixtures Linux; I004 escreve somente `web/` shell e componentes comuns. Os três consomem contratos congelados em W001, não as saídas uns dos outros. Bancos/volumes/portas de teste são exclusivos por item; registro e composição globais são integrados no portão, depois dos itens. Pares I002–I003, I002–I004 e I003–I004 não compartilham arquivos nem efeitos externos durante execução. Uma falha de um item não altera fixtures dos demais.
 
 ### Limites de propriedade <!-- wop:field ownership_boundaries -->
 
-I009 possui composição e infraestrutura comuns do AetherDesk e pode corrigir módulos com revisão dos respectivos contratos. Não edita Olympus nem executa implantação de produção sem autorização.
+I002 detém identidade, sessões, permissões, auditoria e migração própria; I003 detém provisionamento, montagem, ciclo de vida e persistência; I004 detém shell visual e SDK contratual de cliente. Nenhum item altera `AppComposition`, `launch.py`, roteamento global ou configuração comum até o portão.
 
-<!-- wop:prompt-assigned-item I009 -->
-#### Item I009 — Produto integrado e operação
+<!-- wop:prompt-assigned-item I002 -->
+#### Item I002 — Identidade, sessões e autorização
 
 ##### Objetivo <!-- wop:field objective -->
 
-Produzir uma versão AetherDesk instalável e demonstrar os requisitos aceitos para esta versão na distribuição WSL 2 local.
+Entregar o núcleo de contas e permissões com contexto autenticado confiável e auditoria administrativa.
 
 ##### Contexto <!-- wop:field context -->
 
-Os contratos de W001 e módulos aceitos de W002/W003 são a base; testes locais dos módulos não provam isolamento ou recuperação do conjunto.
+Casos de uso autorizam antes de validar dados controlados pelo cliente ou causar efeitos; Boundary traduz solicitações e obtém o ator da sessão.
 
 ##### Entradas e pré-requisitos <!-- wop:field inputs_prerequisites -->
 
-- Todos os exports, testes, políticas e decisões aceitos nos portões W001–W003; WSL 2 disponível no Windows, com distribuição descartável a provisionar em I009.
+- Contratos de identidade, papéis, políticas de revogação e migração de W001.
 
 ##### Escopo <!-- wop:field scope -->
 
-- Compor backend/web/runtime, migrações e roteamento; instalar distribuição WSL 2 com systemd e registrar a origem do Docker; configurar HTTPS local e serviço; documentar operação; executar testes e2e, concorrência, segurança, carga, atualização, reversão e restauração com dados descartáveis; corrigir falhas.
+- Configuração inicial, credenciais e sessões, criação/edição/desativação/exclusão lógica, redefinição de senha, papéis, permissões efetivas, revogação de autenticação distinta de parada de sessão e registro administrativo sem dados pessoais de conteúdo.
 
 ##### Propriedade <!-- wop:field ownership -->
 
-- Arquivos comuns e homologação; mudanças em módulos devem manter seus contratos e registrar revisão quando material.
+- Arquivos de domínio, ferramentas e Boundary de identidade e sua migração; fixtures de DB próprias.
 
 ##### Saídas <!-- wop:field outputs -->
 
-- Aplicação instalável, runbooks, suíte e2e, relatório de segurança/desempenho WSL, matriz de aceite e pacote de evidências com lista explícita das provas reservadas ao servidor independente.
+- Núcleo de identidade, esquema e migração, APIs/exports de autenticação/autorização, eventos de revogação e suíte de testes.
 
 ##### Restrições <!-- wop:field restrictions -->
 
-- Nenhum teste destrutivo em dados reais; não transformar evidência WSL em aprovação do servidor independente; implantação real depende de autorização separada.
+- Não implementar acesso administrativo implícito aos dados de terceiros; não escrever no runtime ou shell visual.
+
+<!-- wop:prompt-assigned-item I003 -->
+#### Item I003 — Ambiente Linux individual
+
+##### Objetivo <!-- wop:field objective -->
+
+Entregar provisionamento idempotente, raiz pessoal e ciclo de vida de ambiente com dados persistentes.
+
+##### Contexto <!-- wop:field context -->
+
+O ambiente executa Bash e programas; a API nunca aceita um diretório hospedeiro ou ID livre como autoridade de propriedade.
+
+##### Entradas e pré-requisitos <!-- wop:field inputs_prerequisites -->
+
+- Contrato de ambiente, políticas de processo/dados e protótipo Linux aceitos em W001.
+
+##### Escopo <!-- wop:field scope -->
+
+- Criar/iniciar/parar/recriar ambiente, preservar execução após logout/revogação, encerrar processos na parada de sessão e exclusão, base de ferramentas, montagem pessoal, limites iniciais, estado e diagnóstico; exportar operações seguras de arquivos, PTY e métricas.
+
+##### Propriedade <!-- wop:field ownership -->
+
+- Runtime, ferramentas de ambiente, artefatos Linux e fixtures exclusivas; não altera identidade ou web.
+
+##### Saídas <!-- wop:field outputs -->
+
+- Gerenciador de ambiente, configuração da imagem/base, contrato de volumes, estado e suíte de isolamento/concorrência.
+
+##### Restrições <!-- wop:field restrictions -->
+
+- Testes potencialmente destrutivos apenas em Linux descartável; não montar diretórios de outro usuário nem expor socket privilegiado ao navegador.
+
+<!-- wop:prompt-assigned-item I004 -->
+#### Item I004 — Desktop e componentes comuns
+
+##### Objetivo <!-- wop:field objective -->
+
+Entregar o shell web responsivo que hospeda aplicativos e preserva preferências visuais.
+
+##### Contexto <!-- wop:field context -->
+
+O cliente apresenta o estado; não decide autorização. Usa adaptadores de API contratados e fixtures, sem depender do backend ainda em construção.
+
+##### Entradas e pré-requisitos <!-- wop:field inputs_prerequisites -->
+
+- Contratos HTTP/WebSocket, estados de conexão, navegação e permissões de W001.
+
+##### Escopo <!-- wop:field scope -->
+
+- Login, preparação, desktop, gerenciador de janelas, barra de tarefas, notificações, SDK de cliente e persistência de tema, janelas abertas e posições pelo contrato.
+
+##### Propriedade <!-- wop:field ownership -->
+
+- `web/` shell, UI base e mocks isolados; não edita backend nem aplicativos de W003.
+
+##### Saídas <!-- wop:field outputs -->
+
+- Shell React/TypeScript, contratos de slots de aplicativo, telas de login/preparação e testes de interação.
+
+##### Restrições <!-- wop:field restrictions -->
+
+- Não tratar ocultação visual como autorização; evitar dados de usuários de teste em snapshots de interface.
 
 <!-- wop:prompt-section predecessor_verification -->
 ### Pré-requisitos <!-- wop:field prerequisites -->
 
-W003 passou; verificar registros, testes e contratos dos quatro módulos, além de todas as decisões e evidências dos portões anteriores.
+W001 passou; conferir contratos, protótipo, políticas aprovadas e mapa de propriedade antes de qualquer edição.
 
-<!-- wop:prompt-predecessor W003 -->
-## Onda W003 — Aplicativos e painéis
+<!-- wop:prompt-predecessor W001 -->
+## Onda W001 — Contratos e prova de viabilidade
 
 ### Objetivo geral <!-- wop:field general_objective -->
 
-Implementar os quatro módulos funcionais do desktop sobre fundações e contratos aceitos, com propriedade isolada por módulo.
+Fixar a referência arquitetural, as políticas ainda abertas, os contratos de módulos e uma prova de isolamento Linux antes de construir o produto.
 
 ### Critérios gerais de aceite <!-- wop:field general_acceptance_criteria -->
 
-- Explorador/editor, terminais, monitor e administração passam contratos, fluxos positivos, erros e verificações negativas de permissão em fixtures independentes.
-- Cada módulo exporta Boundary, casos de uso, ferramentas e componente web sem modificar a composição compartilhada; o portão integra os registros e confirma que os quatro podem abrir no shell.
+- Uma decisão de arquitetura identifica edição/estado/fonte Vulcan, a adaptação sem Minerva, layout, contratos públicos, modelo de ameaça e limites; cada incógnita U001–U004 tem decisão ou bloqueio explícito.
+- Um protótipo em Linux demonstra que `cd /` e leitura de `/dados.txt` permanecem no ambiente correto para dois usuários e que atualização da base não apaga dados persistentes.
 
 ### Portão de conclusão <!-- wop:field completion_gate -->
 
-I005–I008 aceitos individualmente; integração de exports e rotas no portão passa; nenhuma leitura cruzada, sobrescrita silenciosa ou vazamento de métrica fica aberto. W004 só inicia após registro dessa evidência.
+I001 aceito com evidências reproduzíveis; decisões do responsável sobre processos, dados e backup incorporadas; nenhum contrato necessário a W002 permanece indefinido. Falha de isolamento ou divergência arquitetural material bloqueia W002.
 
 ### Evidências exigidas <!-- wop:field evidence_requirements -->
 
-- Suítes de contrato, integração e UI de cada módulo, cenários negativos, capturas de telas e relatório do registro integrado.
+- `docs/L3_Vulcan/architecture.md`, `decision-record.md`, contratos versionados, modelo de ameaça, relatório do protótipo com comandos/ambiente/resultados e registro da fonte Vulcan.
 
 ### Integração e passagem <!-- wop:field integration_handoff -->
 
-Entregar módulos registrados, matriz de permissões implementada, contratos de erro/eventos e comandos de teste para a jornada completa de I009.
+Congele interfaces para identidade, ambiente, arquivos, PTY, métricas, auditoria e cliente web, além de ownership de arquivos e migrações. Entregue decisões D001–D003 confirmadas ou revisadas e comandos de verificação do protótipo.
 
-<!-- wop:prompt-predecessor-item I005 -->
-#### Item I005 — Explorador e editor
-
-##### Saídas <!-- wop:field outputs -->
-
-- Boundary de arquivos, casos de uso, ferramenta de filesystem, Explorer, editor e testes.
-
-##### Critérios de aceite <!-- wop:field acceptance_criteria -->
-
-- Suíte cobre todas as operações de R005, `Ctrl+S`, abas, conflito externo, caminho relativo, symlink, tentativa de atravessar raiz, substituição explícita e arquivo criado por fixture Bash aparecendo no Explorer.
-
-##### Evidência de verificação <!-- wop:field verification_evidence -->
-
-- Testes de contrato/integração/UI, roteiro de concorrência e captura dos estados de conflito.
-
-##### Requisitos de passagem <!-- wop:field handoff_requirements -->
-
-- Exportar rotas, componente web, eventos e contratos de conflito para I009.
-
-<!-- wop:prompt-predecessor-item I006 -->
-#### Item I006 — Terminal Bash
+<!-- wop:prompt-predecessor-item I001 -->
+#### Item I001 — Referência, políticas e contratos
 
 ##### Saídas <!-- wop:field outputs -->
 
-- Serviço PTY, Boundary, cliente terminal e testes.
+- Documentos e contratos GC001–GC005 refinados, matriz de permissões, tabela de transições de ambiente, mapa de persistência, decisão de runtime, orçamento de carga, relatório do protótipo e inventário de ownership por módulo.
 
 ##### Critérios de aceite <!-- wop:field acceptance_criteria -->
 
-- Duas sessões da mesma conta mantêm cwd/estado distintos e veem os mesmos arquivos; logout/revogação da sessão web mantêm PTYs e processos ativos para reconexão após novo login, enquanto parada de sessão os encerra; `Ctrl+C`, resize e fechamento explícito funcionam; outro usuário e permissão revogada não conseguem conectar ao PTY existente.
+- Cada contrato consumido em W002/W003 define entrada, saída, falha, identidade e versão; relatório reproduz dois usuários com mesmo caminho e conteúdo diferente, raiz correta para shell e programa e persistência após recriação.
+- O orçamento de carga declara usuários simultâneos, arquivos, terminais, intervalo de amostragem, ambiente de medição e limites de latência/consumo para W004.
+- A fonte Vulcan tem identidade verificável ou o limite de verificação é documentado e aceito como restrição de referência; nenhuma afirmação de conformidade depende de Minerva ausente.
 
 ##### Evidência de verificação <!-- wop:field verification_evidence -->
 
-- Testes PTY/WebSocket, cenário de revogação em conexão aberta e inspeção de terminal no navegador.
+- Hashes/estado/edição da fonte, revisão do desenho, comandos e saídas do protótipo em Linux, registro de decisão de políticas pelo responsável.
 
 ##### Requisitos de passagem <!-- wop:field handoff_requirements -->
 
-- Exportar rotas, eventos de ciclo de vida e componente terminal para I009.
-
-<!-- wop:prompt-predecessor-item I007 -->
-#### Item I007 — Monitor de recursos
-
-##### Saídas <!-- wop:field outputs -->
-
-- Coletor/adaptadores, casos, Boundary e painéis de monitoramento.
-
-##### Critérios de aceite <!-- wop:field acceptance_criteria -->
-
-- Testes demonstram atribuição correta a dois ambientes, consumo compartilhado separado, unidades e carimbo temporal, métrica indisponível explícita, ordenação e negação de visão por usuário/processos sem permissão.
-
-##### Evidência de verificação <!-- wop:field verification_evidence -->
-
-- Fixtures de métricas, testes de autorização/apresentação e capturas das três visões.
-
-##### Requisitos de passagem <!-- wop:field handoff_requirements -->
-
-- Exportar rotas, formatos e frequência de coleta para I009.
-
-<!-- wop:prompt-predecessor-item I008 -->
-#### Item I008 — Administração e preferências
-
-##### Saídas <!-- wop:field outputs -->
-
-- Painel administrativo, configurações e testes de autorização/fluxo.
-
-##### Critérios de aceite <!-- wop:field acceptance_criteria -->
-
-- Administrador cria/edita/desativa/exclui logicamente conta, revoga autenticação sem parar processos, para sessão encerrando processos, configura frequência/destino/retenção de backup, vê permissões efetivas e retenta ambiente falho sem duplicar dados; membro não acessa rotas administrativas; preferências persistem; ação de impacto nomeia alvo e consequência.
-
-##### Evidência de verificação <!-- wop:field verification_evidence -->
-
-- Testes de rotas/UI, captura da confirmação e auditoria produzida por ações de teste.
-
-##### Requisitos de passagem <!-- wop:field handoff_requirements -->
-
-- Exportar telas/rotas e roteiro administrativo para I009.
+- Entregar contratos congelados, ownership de diretórios, fixtures independentes e decisões operacionais aos itens I002–I008.
 
 <!-- wop:prompt-section shared_context -->
 ## Resultado <!-- wop:section outcome -->
@@ -193,7 +200,7 @@ O diretório `E:\Alkimim\Projetos\CodeVault\AetherDesk` estava sem arquivos de a
 - F002: A cópia local Vulcan Stable-v1.0.0 organiza exemplos em `apps/<App>/`, `docs/L3_Vulcan/` e um mecanismo explícito de entrada; seus exemplos usam `entities/`, `usecases/`, `tools/`, `boundaries/` e `composition/`. Fonte: `versioning/Stable-v1.0.0/README.md` e `examples/minimal/`, inspecionados em 22/11/2026.
 - F003: A conformidade formal dessa edição exige uma árvore Minerva completa e mapeamentos módulo→arquivo/símbolo em `realization.json`. AetherDesk, por escolha explícita de escopo, não alegará conformidade formal nem criará um ledger Minerva fictício. Fonte: `AGENTS.md` e `versioning/Stable-v1.0.0/README.md` locais.
 - F004: O texto inicial propõe React/TypeScript, Monaco, xterm.js e runtime de isolamento, mas não fixa implementação nem políticas de ciclo de vida, ferramentas ou cópias de segurança. Fonte: texto de requisitos fornecido pelo usuário.
-- F005: Em 22/11/2026, o responsável informou que não há host Linux independente, pediu homologação no WSL deste PC e autorizou adaptar o plano para concluir a versão local sem aguardar esse host. `wsl --list --verbose` não encontrou distribuição instalada; W004 inclui provisionar uma distribuição descartável.
+- F005: Em 22/11/2026, o responsável informou que não há host Linux independente, pediu homologação no WSL deste PC e autorizou adaptar o plano para concluir a versão local sem aguardar esse host. A consulta WSL sem elevação no sandbox ocultou distribuições existentes; a consulta elevada revelou `Ubuntu` e `docker-desktop`. I009 instalou separadamente `Ubuntu-24.04` em `.local-wsl/Ubuntu-24.04`, com systemd e Docker Engine nativo.
 
 ## Escopo <!-- wop:section scope -->
 
@@ -262,7 +269,7 @@ O diretório `E:\Alkimim\Projetos\CodeVault\AetherDesk` estava sem arquivos de a
 - U002: O protótipo em Docker Linux demonstrou raiz pessoal e persistência. W004 repetirá isolamento, ferramentas e ciclo de vida no WSL; quotas e capacidade do servidor independente permanecem pendências explicitamente transferidas para a validação do host alvo. Falha de isolamento no WSL bloqueia este portão.
 - U003: Resolvida pelo responsável em 22/11/2026: logout e revogação administrativa de sessão não param processos, PTYs ou desktop; novo login restaura janelas e posições. Parar sessão cancela processos. Excluir usuário para processos e preserva arquivos. I001 formaliza transições.
 - U004: Resolvida pelo responsável em 22/11/2026: backup é configurável na aplicação e desativado por padrão; frequência, destino e retenção por prazo ou substituição são escolhas administrativas. O destino de teste para homologação será definido em W004.
-- U005: Ainda não há distribuição WSL instalada. I009 verifica versão, virtualização, privilégios e acesso ao pacote da distribuição; instala uma distribuição descartável quando possível e registra qualquer dependência inevitável de reinício ou acesso externo. Não substitui prova ausente por simulação.
+- U005: Resolvida em I009: WSL 2 versão 2.5.10, Ubuntu 24.04.5 LTS descartável com systemd, Docker Engine 29.1.3 nativo, Caddy 2.6.2 e Python 3.12.3 foram instalados sem reinício do Windows. A validação de ciclo de vida da distribuição não substitui boot do servidor independente.
 
 ## Riscos <!-- wop:section risks -->
 
@@ -351,34 +358,62 @@ Estes cenários reproduzem o contrato observável do texto inicial. I009 registr
 <!-- wop:prompt-section completion_contract -->
 ### Critérios gerais de aceite <!-- wop:field general_acceptance_criteria -->
 
-- Os 14 cenários de R014 passam na distribuição WSL 2 com dois usuários e duas sessões simultâneas da mesma conta; APIs/WS e terminal negam acessos cruzados e revogações abertas.
-- Na distribuição WSL 2, instalação com HTTPS local e serviço systemd iniciado ao abrir a distribuição, atualização, reversão, backup configurado explicitamente no ensaio e restauração são reproduzidos com dados de teste; padrão desativado e duas modalidades de retenção são verificados. A prova registra que systemd não garante que a instância WSL permaneça ativa nem que o serviço inicie com o boot do Windows.
-- O orçamento proposto em W001 é confirmado como meta deste ensaio local antes da medição; a carga no WSL é medida com perfil, amostras e percentis e atende às metas ou os desvios são corrigidos e repetidos. A medição não é apresentada como capacidade do servidor alvo.
+- Identidade e permissões, ambiente isolado e shell do desktop passam suas suítes em fixtures separadas; contratos entre módulos coincidem com W001 e não há escrita cruzada.
+- Dois provisionamentos simultâneos produzem um ambiente; conta desativada perde acesso sem apagar arquivos; logout/revogação conservam processos e desktop; dados sobrevivem à recriação; shell web apresenta estados de conexão e janelas básicas.
 
 ### Portão de conclusão <!-- wop:field completion_gate -->
 
-I009 aceito com relatório de testes, revisão de segurança, restauração, operação e limites residuais no WSL; inspeção funcional documentada contra os critérios do item. Não exigir host independente nem aprovação humana adicional para concluir este pacote. A validação do host alvo e a implantação de produção permanecem separadas.
+I002, I003 e I004 aceitos individualmente; revisão de contratos e integração de pacotes passam sem alterar ownership concorrente; nenhuma falha de isolamento ou autorização fica aberta.
 
 ### Evidências exigidas <!-- wop:field evidence_requirements -->
 
-- Relatórios de unidade/integração/e2e, matriz R001–R014 com R011 delimitado, logs redigidos, medição de carga WSL, inspeção UI, instalação/reabertura da distribuição/reversão, backup/restauração e decisão de aceite técnico. Registrar como pendências externas a prova de boot e de capacidade do servidor independente.
+- Saídas de testes unitários, integração de identidade/DB, concorrência e isolamento Linux, verificações estáticas do cliente e inspeção do desktop em navegador.
 
 ### Integração e passagem <!-- wop:field integration_handoff -->
 
-Entregar código e configuração versionados, runbook de instalação/atualização/reversão/restauração, matriz de evidências WSL, riscos residuais e decisão de aceite técnico; listar separadamente as verificações do servidor independente para a etapa posterior.
+Publicar interfaces versionadas de contexto autenticado, repositório de contas, ambiente pessoal, eventos e SDK/web shell. Registrar alterações de contrato como revisão do plano antes de W003.
 
-<!-- wop:prompt-completion-item I009 -->
-#### Item I009 — Produto integrado e operação
+<!-- wop:prompt-completion-item I002 -->
+#### Item I002 — Identidade, sessões e autorização
 
 ##### Critérios de aceite <!-- wop:field acceptance_criteria -->
 
-- Cada um dos 14 cenários tem procedimento, ambiente WSL, resultado e evidência; cenários adicionais demonstram logout/revogação com processos e janelas preservados, parada/exclusão com processos encerrados e arquivos mantidos, backup desativado por padrão e configuração das duas retenções; falhas bloqueantes são corrigidas e repetidas. Após encerrar e reabrir a distribuição, systemd inicia o serviço e os dados persistem; HTTPS local, cookies `Secure`, WebSocket `wss` e permissões dos segredos são verificados. Backup restaurado reproduz contas, permissões, preferências e arquivos sem perder isolamento.
-- Testes negativos cobrem troca de IDs, path traversal/symlink, PTY alheio, revogação durante WS e restrição de filesystem via Bash; medição informa carga, amostras, percentis e comparação com metas locais previamente registradas. O relatório identifica Docker Desktop ou daemon nativo, limitações do WSL e provas ainda necessárias no servidor independente.
+- Testes mostram primeiro administrador único, senha não armazenada em claro, alteração de nome sem troca de ID, desativação/exclusão bloqueando novo acesso, arquivos preservados na exclusão, revogação de sessão aberta sem parar processos e negação de operações com ID de outro usuário.
 
 ##### Evidência de verificação <!-- wop:field verification_evidence -->
 
-- Comandos/versões de Windows, WSL, distribuição e Docker; relatórios de testes e Linux WSL, capturas, resultados de restauração, revisão de segurança, orçamento e medição de carga local, registro de aceite técnico e lista das provas futuras do host.
+- Resultados de testes de DB, concorrência, revogação e ausência de credenciais em logs; esquema e comando de migração.
 
 ##### Requisitos de passagem <!-- wop:field handoff_requirements -->
 
-- Entregar procedimentos operacionais, configuração sem segredos, resultados WSL e limitações para uma decisão posterior de validação e implantação em servidor independente.
+- Exportar contexto, checagens de permissão, eventos de revogação e versão do esquema para I005–I008.
+
+<!-- wop:prompt-completion-item I003 -->
+#### Item I003 — Ambiente Linux individual
+
+##### Critérios de aceite <!-- wop:field acceptance_criteria -->
+
+- Dois logins concorrentes da mesma conta compartilham um único ambiente; dois IDs distintos usam raízes independentes; `cd /`, programa que abre `/dados.txt`, symlink e recriação obedecem isolamento e persistência; logout/revogação conservam processo ativo e parada explícita o encerra.
+
+##### Evidência de verificação <!-- wop:field verification_evidence -->
+
+- Saídas de testes no Linux identificado, inventário de montagens/volumes e logs de falha/retry sem dados sensíveis.
+
+##### Requisitos de passagem <!-- wop:field handoff_requirements -->
+
+- Exportar operações de ambiente e capacidade de coleta para I005–I007, com erros e semântica de reconexão.
+
+<!-- wop:prompt-completion-item I004 -->
+#### Item I004 — Desktop e componentes comuns
+
+##### Critérios de aceite <!-- wop:field acceptance_criteria -->
+
+- Inspeção em navegador demonstra abrir, mover, redimensionar, minimizar, maximizar e alternar janelas; novo login restaura janelas e posições; estados de carregamento/falha/desconexão são distinguíveis e reconexão preserva conteúdo disponível.
+
+##### Evidência de verificação <!-- wop:field verification_evidence -->
+
+- Build/tipos, testes de componentes e roteiro com capturas da inspeção em navegador.
+
+##### Requisitos de passagem <!-- wop:field handoff_requirements -->
+
+- Publicar slots de aplicativo, cliente versionado e padrões de estado para I005–I008.

@@ -1,14 +1,14 @@
 ---
 plan_id: a47c4d01-5e49-4b24-aaaf-2535f78447e0
 title: Implementar o AetherDesk com organização Vulcan
-version: 3
+version: 4
 language: pt-BR
 complexity: extensive
-plan_status: in_progress
-execution_status: in_progress
-acceptance_status: not_evaluated
+plan_status: accepted
+execution_status: executed
+acceptance_status: accepted
 created_at: 2026-11-22T14:19:38-03:00
-updated_at: 2026-11-22T16:30:01-03:00
+updated_at: 2026-11-22T17:05:34-03:00
 ---
 
 # Implementar o AetherDesk com organização Vulcan
@@ -27,7 +27,7 @@ O diretório `E:\Alkimim\Projetos\CodeVault\AetherDesk` estava sem arquivos de a
 - F002: A cópia local Vulcan Stable-v1.0.0 organiza exemplos em `apps/<App>/`, `docs/L3_Vulcan/` e um mecanismo explícito de entrada; seus exemplos usam `entities/`, `usecases/`, `tools/`, `boundaries/` e `composition/`. Fonte: `versioning/Stable-v1.0.0/README.md` e `examples/minimal/`, inspecionados em 22/11/2026.
 - F003: A conformidade formal dessa edição exige uma árvore Minerva completa e mapeamentos módulo→arquivo/símbolo em `realization.json`. AetherDesk, por escolha explícita de escopo, não alegará conformidade formal nem criará um ledger Minerva fictício. Fonte: `AGENTS.md` e `versioning/Stable-v1.0.0/README.md` locais.
 - F004: O texto inicial propõe React/TypeScript, Monaco, xterm.js e runtime de isolamento, mas não fixa implementação nem políticas de ciclo de vida, ferramentas ou cópias de segurança. Fonte: texto de requisitos fornecido pelo usuário.
-- F005: Em 22/11/2026, o responsável informou que não há host Linux independente, pediu homologação no WSL deste PC e autorizou adaptar o plano para concluir a versão local sem aguardar esse host. `wsl --list --verbose` não encontrou distribuição instalada; W004 inclui provisionar uma distribuição descartável.
+- F005: Em 22/11/2026, o responsável informou que não há host Linux independente, pediu homologação no WSL deste PC e autorizou adaptar o plano para concluir a versão local sem aguardar esse host. A consulta WSL sem elevação no sandbox ocultou distribuições existentes; a consulta elevada revelou `Ubuntu` e `docker-desktop`. I009 instalou separadamente `Ubuntu-24.04` em `.local-wsl/Ubuntu-24.04`, com systemd e Docker Engine nativo.
 
 ## Escopo <!-- wop:section scope -->
 
@@ -64,7 +64,7 @@ O diretório `E:\Alkimim\Projetos\CodeVault\AetherDesk` estava sem arquivos de a
 - U002: O protótipo em Docker Linux demonstrou raiz pessoal e persistência. W004 repetirá isolamento, ferramentas e ciclo de vida no WSL; quotas e capacidade do servidor independente permanecem pendências explicitamente transferidas para a validação do host alvo. Falha de isolamento no WSL bloqueia este portão.
 - U003: Resolvida pelo responsável em 22/11/2026: logout e revogação administrativa de sessão não param processos, PTYs ou desktop; novo login restaura janelas e posições. Parar sessão cancela processos. Excluir usuário para processos e preserva arquivos. I001 formaliza transições.
 - U004: Resolvida pelo responsável em 22/11/2026: backup é configurável na aplicação e desativado por padrão; frequência, destino e retenção por prazo ou substituição são escolhas administrativas. O destino de teste para homologação será definido em W004.
-- U005: Ainda não há distribuição WSL instalada. I009 verifica versão, virtualização, privilégios e acesso ao pacote da distribuição; instala uma distribuição descartável quando possível e registra qualquer dependência inevitável de reinício ou acesso externo. Não substitui prova ausente por simulação.
+- U005: Resolvida em I009: WSL 2 versão 2.5.10, Ubuntu 24.04.5 LTS descartável com systemd, Docker Engine 29.1.3 nativo, Caddy 2.6.2 e Python 3.12.3 foram instalados sem reinício do Windows. A validação de ciclo de vida da distribuição não substitui boot do servidor independente.
 
 ## Requisitos <!-- wop:section requirements -->
 
@@ -752,3 +752,4 @@ Identifique o pacote e leia `README.md` e todos os prompts de onda referenciados
 - Versão 1 — 2026-11-22T14:19:38-03:00 — Plano inicial a partir dos requisitos do AetherDesk e da referência Vulcan local, com escopo restrito à aplicação e sem Atlas/Minerva.
 - Versão 2 — 2026-11-22T14:35:53-03:00 — Confirmada a edição Vulcan remota; incorporadas as decisões do responsável sobre continuidade de processos/janelas após logout e revogação, parada distinta, exclusão com arquivos preservados e backup configurável desativado por padrão.
 - Versão 3 — 2026-11-22T16:30:01-03:00 — Homologação deste pacote transferida para distribuição WSL 2 local por decisão do responsável; I009 inclui seu provisionamento, instalação, testes, recuperação e aceite técnico observável. A prova de boot, rede, quotas e carga do servidor independente foi retirada do portão atual e registrada como pré-condição de implantação futura.
+- Versão 4 — 2026-11-22T17:05:34-03:00 — Corrigido o inventário WSL após inspeção elevada e registrado o provisionamento concluído da distribuição dedicada, sem alterar o escopo ou os critérios de aceite da versão 3.

@@ -1,6 +1,25 @@
-# Instalação e operação Linux (preparada, ainda não homologada no host)
+# Instalação e operação Linux
 
-Alvo: um servidor Debian amd64 com systemd, Docker Engine, Python 3.13, Caddy, DNS do domínio e portas 80/443 alcançáveis para emissão TLS. Os comandos abaixo precisam ser executados em **host descartável de homologação** antes de serem adotados em produção. O usuário informou em 22/11/2026 que esse host ainda não existe.
+## Homologação local WSL 2
+
+A versão 3 do plano usa uma distribuição Ubuntu 24.04 WSL 2 descartável para concluir a homologação local. Em 22/11/2026, a distribuição `Ubuntu-24.04` foi instalada em `.local-wsl/Ubuntu-24.04`, com `systemd`, Docker Engine 29.1.3 **nativo da distribuição**, Caddy 2.6.2 e Python 3.12.3. Não depende da integração Docker Desktop. Dados e segredos ficam no filesystem Linux, em `/var/lib/aetherdesk` e `/etc/aetherdesk`; `.local-wsl/` é ignorado pelo Git.
+
+Para reproduzir em uma distribuição descartável, instalar Ubuntu 24.04 no WSL 2, `docker.io`, `caddy`, `python3-venv` e `python3-pip`. Copiar `apps/`, `web/dist/`, `launch.py`, `deploy/`, `scripts/setup_wsl_homologation.py`, `scripts/verify_wsl_service.py` e `scripts/verify_wsl_backup_schedule.py` para `/opt/aetherdesk`, preservando `web/dist/`. Criar `.venv` e instalar `deploy/requirements.txt` e `httpx` para os verificadores. Construir as três imagens Docker com os comandos abaixo, criar o usuário de sistema `aetherdesk` no grupo `docker` e os diretórios `/var/lib/aetherdesk` e `/var/backups/aetherdesk` com dono `aetherdesk` e modo `0700`. Executar como root:
+
+```bash
+python3 /opt/aetherdesk/scripts/setup_wsl_homologation.py
+cd /opt/aetherdesk
+.venv/bin/python scripts/verify_wsl_service.py
+.venv/bin/python scripts/verify_wsl_backup_schedule.py
+```
+
+O configurador cria segredos aleatórios somente na primeira execução, instala a unidade systemd e configura Caddy em `https://localhost` com CA local. O verificador confia explicitamente em `/var/lib/caddy/.local/share/caddy/pki/authorities/local/root.crt`; não desabilita a verificação TLS. A senha da conta de teste fica em `/etc/aetherdesk/test-admin.password` com modo `0600`. O backup agendado é ativado apenas durante seu ensaio e desativado em `finally`.
+
+Encerrar somente `Ubuntu-24.04` com `wsl --terminate Ubuntu-24.04` e reabri-la comprova o início da unidade ao iniciar a distribuição, após aguardar `/healthz`. Isso não comprova boot do Windows nem de um servidor Linux independente; serviços systemd não mantêm a instância WSL viva. A validação de boot real, TLS público, acesso externo, quotas e capacidade do host permanece necessária antes de produção.
+
+## Servidor Linux independente — procedimento futuro
+
+Alvo futuro: um servidor Debian amd64 com systemd, Docker Engine, Python 3.13, Caddy, DNS do domínio e portas 80/443 alcançáveis para emissão TLS. Os comandos abaixo ainda precisam ser executados em **host independente descartável** antes de serem adotados em produção. O responsável informou em 22/11/2026 que esse host ainda não existe.
 
 ## Preparar o pacote
 

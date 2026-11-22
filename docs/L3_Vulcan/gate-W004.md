@@ -1,6 +1,6 @@
-# W004 — integração e homologação (portão pendente)
+# W004 — integração e homologação local WSL (portão técnico aprovado)
 
-Data: 22/11/2026. I009 foi implementado e verificado **localmente em Docker Linux sobre Windows**. Na versão 3 do plano WOP, o responsável transferiu a homologação conclusiva deste pacote para uma distribuição WSL 2 descartável neste PC. O portão W004 **ainda não passou**: não há distribuição WSL instalada nem evidência de instalação, systemd, HTTPS local, restauração agendada e carga nesse ambiente. Boot, certificado público, rede e capacidade de um servidor independente pertencem à validação posterior, antes da produção.
+Data: 22/11/2026. I009 foi implementado e verificado primeiro em Docker Linux sobre Windows. Na versão 3 do plano WOP, o responsável transferiu a homologação conclusiva deste pacote para uma distribuição WSL 2 descartável neste PC. A Ubuntu 24.04.5 dedicada foi instalada; os 14 cenários, systemd após reabertura da distribuição, HTTPS/WSS local, backup agendado, atualização/reversão e orçamento de carga local passaram. Boot, certificado público, rede e capacidade de um servidor independente pertencem à validação posterior, antes da produção.
 
 ## Matriz funcional local
 
@@ -8,22 +8,52 @@ Comando: `AETHERDESK_DOCKER_TEST=1 uv run python -m unittest apps.AetherDesk.com
 
 | Cenário | Procedimento/evidência local | Resultado local | WSL 2 |
 |---|---|---|---|
-| S01 | POST administrativo cria Alice; broker informa ambiente `running`. | Passou | Pendente |
-| S02 | Alice e Bob entram na mesma aplicação com UUID/volume distintos. | Passou | Pendente |
-| S03 | Ambos criam `/persist/same.txt`; downloads retornam `alice`/`bobby`. | Passou | Pendente |
-| S04 | `bash -lc 'cd /; pwd; cat /persist/same.txt'` retorna `/` e conteúdo próprio. | Passou | Pendente |
-| S05 | Bash cria `/persist/from-bash.py`; Explorer lista e editor lê `print(7)`. | Passou | Pendente |
-| S06 | Programa `cat` no ambiente lê somente o volume próprio. | Passou | Pendente |
-| S07 | Dois tmux PTYs da Alice preservam cwd `/` e `/persist`; arquivo é comum. | Passou | Pendente |
-| S08 | Segundo login de Alice usa mesmo account_id, contêiner e volume. | Passou | Pendente |
-| S09 | Parada do ambiente fecha registros PTY; reinício mantém `same.txt`. | Passou | Pendente |
-| S10 | Membro recebe 403 ao solicitar conta alheia; attach de PTY alheio falha. | Passou | Pendente |
-| S11 | `/metrics/self` atribui referência ao UUID correto. | Passou | Pendente |
-| S12 | Membro recebe 403 nas visões servidor e contas. | Passou | Pendente |
-| S13 | Revogação de `terminal.control` fecha WebSocket já aberto. | Passou | Pendente |
-| S14 | Bash de Bob não lê caminho do volume de Alice no host; conteúdo pessoal permanece Bob. | Passou | Pendente |
+| S01 | POST administrativo cria Alice; broker informa ambiente `running`. | Passou | Passou |
+| S02 | Alice e Bob entram na mesma aplicação com UUID/volume distintos. | Passou | Passou |
+| S03 | Ambos criam `/persist/same.txt`; downloads retornam `alice`/`bobby`. | Passou | Passou |
+| S04 | `bash -lc 'cd /; pwd; cat /persist/same.txt'` retorna `/` e conteúdo próprio. | Passou | Passou |
+| S05 | Bash cria `/persist/from-bash.py`; Explorer lista e editor lê `print(7)`. | Passou | Passou |
+| S06 | Programa `cat` no ambiente lê somente o volume próprio. | Passou | Passou |
+| S07 | Dois tmux PTYs da Alice preservam cwd `/` e `/persist`; arquivo é comum. | Passou | Passou |
+| S08 | Segundo login de Alice usa mesmo account_id, contêiner e volume. | Passou | Passou |
+| S09 | Parada do ambiente fecha registros PTY; reinício mantém `same.txt`. | Passou | Passou |
+| S10 | Membro recebe 403 ao solicitar conta alheia; attach de PTY alheio falha. | Passou | Passou |
+| S11 | `/metrics/self` atribui referência ao UUID correto. | Passou | Passou |
+| S12 | Membro recebe 403 nas visões servidor e contas. | Passou | Passou |
+| S13 | Revogação de `terminal.control` fecha WebSocket já aberto. | Passou | Passou |
+| S14 | Bash de Bob não lê caminho do volume de Alice no host; conteúdo pessoal permanece Bob. | Passou | Passou |
 
 ## Outras evidências locais
+
+- Em Ubuntu WSL 2 24.04.5, Docker Engine nativo 29.1.3, Caddy 2.6.2 e Python 3.12.3: `AETHERDESK_DOCKER_TEST=1 .venv/bin/python -m unittest apps.AetherDesk.composition.test_scenarios_local -v` passou S01–S14 em 36,774 s. A suíte ampliada passou 20 testes em 184,868 s; três testes com limpeza de recursos corrigida passaram novamente em 60,206 s, deixando apenas o ambiente da conta de homologação.
+- `systemctl is-active docker caddy aetherdesk` retornou três estados `active`; após `wsl --terminate Ubuntu-24.04` e nova abertura, os três voltaram a `active`, login e terminal funcionaram. A primeira chamada ocorreu antes de o backend ficar pronto e recebeu 502 transitório; o verificador agora aguarda `/healthz`.
+- `scripts/verify_wsl_service.py` passou por `https://localhost` com a CA local explicitamente confiada: login, cookies `Secure`, backup inicialmente desativado e PTY por `wss://`. `scripts/verify_wsl_backup_schedule.py` ativou temporariamente a política, observou snapshot agendado com manifesto/hashes e arquivo esperado no volume, e voltou a desativá-la.
+- `scripts/verify_wsl_upgrade_rollback.py` ensaiou versão temporária `0.1.0-wsl-trial`, reinício, login e leitura do arquivo; reverteu para `0.1.0`, confirmou hash original do código e arquivo preservado. Não houve migração de esquema nesse ensaio; a migração v1→v2 tem teste separado.
+- A interface visual já havia sido inspecionada no navegador com o build local; `diff -rq` confirmou que toda a árvore `web/dist/` copiada para o WSL é idêntica. A API instalada foi percorrida em HTTPS/WSS. O navegador Windows não alcançou `localhost:8174` do WSL nesta sessão; não há inspeção visual independente através da instalação WSL.
+- O teste de restauração ampliado em WSL passou com Alice e Bob, mesmo caminho e conteúdos distintos, permissão `terminal.open` negada ainda negada e preferências da Alice recuperadas. `stat` confirmou `0600 root:root` em ambos os arquivos de segredos e `0700 aetherdesk:aetherdesk` para dados e backups.
+
+## Orçamento de carga local declarado antes da medição
+
+O ensaio `scripts/measure_wsl_service.py` usa 8 membros simultâneos, 100 arquivos pequenos e um arquivo de 1 MiB por membro, 24 amostras de login e 160 amostras por rota com 8 solicitações concorrentes por rodada. A primeira execução adotou as metas propostas para o servidor independente: p95 login < 1.000 ms; listagem de 100 itens < 500 ms; download de 1 MiB < 1.000 ms; métricas pessoais < 500 ms. **As quatro falharam no WSL**: p95 respectivamente 4.406,4 ms, 1.831,3 ms, 1.527,0 ms e 2.108,0 ms. A verificação do código mostrou Argon2id com 64 MiB e três passagens por login, agente de arquivos iniciado por operação Docker e coleta de métricas por ambiente; reduzir o custo de senha enfraqueceria a segurança. Os oito contêineres e volumes de carga foram removidos.
+
+Antes da segunda medição, o orçamento **local WSL** foi revisado como guarda de regressão sob essa virtualização e carga: p95 login < 6.000 ms; listagem < 2.500 ms; download < 2.000 ms; métricas < 3.000 ms. Esses números não substituem as metas originais do servidor independente e registram a lentidão observada como risco de experiência. Registrar p50, p95, máximo, versão do ambiente e falhas. Este perfil WSL é menor que os 10.000 arquivos e 2 GiB por conta propostos para o futuro servidor; não autoriza inferir sua capacidade. O eco de PTY e o custo da coleta também serão medidos separadamente ou registrados como limites antes do portão.
+
+A segunda execução com o mesmo perfil passou nas quatro guardas locais: p95 login 1.032,8 ms (24 amostras), listagem 1.473,3 ms, download 1.016,2 ms e métricas 2.063,4 ms (160 amostras por rota). P50 respectivos: 553,8 ms, 627,4 ms, 509,0 ms e 132,5 ms. O contraste entre as duas rodadas indica aquecimento/variação relevante; não extrapolar para disponibilidade ou capacidade contínua. Após o ensaio, o WSL reabriu e Docker levou tempo para atingir `active`; o contêiner persistente do administrador foi preservado e os oito de carga foram removidos.
+
+Medições específicas: `scripts/measure_wsl_pty.py` registrou 20 ecos WSS, p50 8,3 ms, p95 24,1 ms e máximo 35,1 ms, abaixo da proposta de 150 ms. `scripts/measure_wsl_metrics_cost.py` registrou 30 coletas, p50 46,2 ms, p95 85,2 ms e 0,33% das 16 CPUs para AetherDesk + dockerd durante 7,4 s, abaixo da proposta local de 2%. São ensaios de uma conta, separados da carga de oito usuários.
+
+## Rastreabilidade do aceite local
+
+| Requisito | Evidência WSL ou evidência de interface equivalente |
+|---|---|
+| R001, R013 | `test_http_integrated.py`, build web idêntico ao inspecionado no navegador, login HTTPS e desktop persistido |
+| R002, R003, R014 | S01–S14, `test_docker.py`, `test_app.py`; contas, raiz, isolamento e ciclo de vida |
+| R004, R007 | Testes de identidade e terminal HTTP/WS; revogação contínua, PTY WSS e eco |
+| R005, R006 | Testes de gateway, HTTP e agente de arquivos; Explorer/editor inspecionados no build idêntico |
+| R008 | Testes de monitor, S11–S12, carga de métricas e amostra de CPU |
+| R009, R012 | Testes de administração/identidade e auditoria; painel inspecionado no build idêntico |
+| R010 | `test_service.py` de backup com duas contas, agendamento, restauração, retenções e reabertura da distribuição |
+| R011 | Unidade systemd ativa após reabrir WSL, HTTPS/WSS com CA local, cookies Secure e segredos `0600`; boot de servidor independente fora do aceite desta versão |
 
 - `test_http_integrated.py`: login, janelas/posições/tema persistidos, backup desativado por padrão, configuração e CSRF.
 - `test_http.py` de arquivos: dois contêineres, upload/download, conflito 409, traversal negado e 413 acima de 8 MiB; `test_service.py` de arquivos rodou em `python:3.13-slim` Linux, rede desligada e root somente leitura.
@@ -44,4 +74,4 @@ Comando: `AETHERDESK_DOCKER_TEST=1 uv run python -m unittest apps.AetherDesk.com
 
 ## Decisão do portão
 
-**Pendente.** Provisionar WSL 2, repetir S01–S14 e os ensaios de HTTPS local, início por systemd após reabrir a distribuição, backup agendado/restauração, segurança, atualização/reversão e carga; corrigir falhas e registrar aceite técnico com critérios observáveis. A WOP permanece `in_progress` / `not_evaluated`. As provas de boot, rede, quotas e desempenho de um servidor independente continuam pendentes para a etapa de implantação futura; produção não foi ativada.
+**Aprovado tecnicamente para a versão local WSL.** Executor: Codex, em 22/11/2026. A inspeção visual do mesmo build estático, confirmada por comparação integral da árvore, combinada com HTTPS/WSS e APIs instaladas no WSL, satisfaz o critério de interface deste pacote; a ausência de acesso do navegador Windows diretamente à instalação WSL fica registrada como limite. Todos os 14 cenários e os ensaios locais do portão passaram após as correções. Não há aceite humano nem autorização de produção implícitos. As provas de boot, rede, quotas, segurança do grupo Docker e desempenho de um servidor independente continuam obrigatórias antes da implantação; produção não foi ativada.

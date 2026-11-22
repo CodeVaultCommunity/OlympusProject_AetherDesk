@@ -22,6 +22,8 @@ class CompositionTests(unittest.TestCase):
             app = AppComposition(identity, runtime)
             environment_id = identity.account(admin, account_id)["environment_id"]
             container, volume = runtime._names(environment_id)
+            admin_environment_id = identity.account(admin, admin.account_id)["environment_id"]
+            admin_container, admin_volume = runtime._names(admin_environment_id)
             try:
                 app.ensure_personal_environment(alice)
                 runtime.exec(account_id, environment_id, ["bash", "-lc", "printf dados >/dados.txt"])
@@ -48,8 +50,9 @@ class CompositionTests(unittest.TestCase):
                 self.assertEqual(subprocess.run(["docker", "volume", "inspect", volume],
                                                 capture_output=True).returncode, 0)
             finally:
-                subprocess.run(["docker", "container", "rm", "--force", container], capture_output=True)
-                subprocess.run(["docker", "volume", "rm", volume], capture_output=True)
+                for name, storage in ((container, volume), (admin_container, admin_volume)):
+                    subprocess.run(["docker", "container", "rm", "--force", name], capture_output=True)
+                    subprocess.run(["docker", "volume", "rm", storage], capture_output=True)
 
 
 if __name__ == "__main__":

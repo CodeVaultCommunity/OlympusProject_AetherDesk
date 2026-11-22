@@ -21,7 +21,7 @@ class TerminalHttpTests(unittest.TestCase):
                 'AETHERDESK_BOOTSTRAP_TOKEN': 'bootstrap-secret-long',
                 'AETHERDESK_CSRF_SECRET': 'csrf-secret-long-enough-for-testing-12345',
                 'AETHERDESK_ALLOW_INSECURE_LOCAL_HTTP': '1'})
-            container = volume = None
+            resources = []
             try:
                 app = create_app()
                 with TestClient(app) as administrator, TestClient(app) as member:
@@ -36,9 +36,11 @@ class TerminalHttpTests(unittest.TestCase):
                     self.assertEqual(created.status_code, 200, created.text)
                     account_id = created.json()['data']['id']
                     identity = IdentityService(os.path.join(temp, 'identity.sqlite3'), 'bootstrap-secret-long')
-                    env_id = identity.account(identity.actor(administrator.cookies.get('aether_session')),
-                                              account_id)['environment_id']
-                    container, volume = DockerEnvironmentBroker._names(env_id)
+                    admin = identity.actor(administrator.cookies.get('aether_session'))
+                    admin_env = identity.account(admin, admin.account_id)['environment_id']
+                    env_id = identity.account(admin, account_id)['environment_id']
+                    resources.extend((DockerEnvironmentBroker._names(admin_env),
+                                      DockerEnvironmentBroker._names(env_id)))
                     member.post('/api/v1/login', json={'username': 'alice', 'password': 'strong-alice-password'})
                     alice_csrf = member.cookies.get('aether_csrf')
                     terminal = member.post('/api/v1/terminals', json={'columns': 80, 'rows': 24},
@@ -61,9 +63,8 @@ class TerminalHttpTests(unittest.TestCase):
                     with member.websocket_connect('/api/v1/ws/terminals/' + terminal_id) as ws:
                         self.assertTrue(ws.receive_bytes())
             finally:
-                if container:
+                for container, volume in resources:
                     subprocess.run(['docker', 'container', 'rm', '--force', container], capture_output=True)
-                if volume:
                     subprocess.run(['docker', 'volume', 'rm', volume], capture_output=True)
                 for key, value in old.items():
                     if value is None:
