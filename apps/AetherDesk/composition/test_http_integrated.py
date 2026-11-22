@@ -1,10 +1,15 @@
 import os
+import sqlite3
+import subprocess
 import tempfile
 import unittest
+from contextlib import closing
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
 from launch import create_app
+from apps.AetherDesk.runtime import DockerEnvironmentBroker
 
 
 class IntegratedHttpTests(unittest.TestCase):
@@ -38,11 +43,23 @@ class IntegratedHttpTests(unittest.TestCase):
                     self.assertEqual(client.post('/api/v1/logout', headers={'X-CSRF-Token': csrf}).status_code, 200)
                     self.assertEqual(client.get('/api/v1/desktop/state').status_code, 401)
             finally:
-                for key, value in previous.items():
-                    if value is None:
-                        os.environ.pop(key, None)
-                    else:
-                        os.environ[key] = value
+                try:
+                    database = Path(temp) / 'identity.sqlite3'
+                    if database.exists():
+                        with closing(sqlite3.connect(database)) as db:
+                            row = db.execute("SELECT environment_id FROM accounts WHERE username = 'admin'").fetchone()
+                        if row:
+                            container, volume = DockerEnvironmentBroker._names(row[0])
+                            subprocess.run(['docker', 'container', 'rm', '--force', container],
+                                           check=True, capture_output=True)
+                            subprocess.run(['docker', 'volume', 'rm', volume],
+                                           check=True, capture_output=True)
+                finally:
+                    for key, value in previous.items():
+                        if value is None:
+                            os.environ.pop(key, None)
+                        else:
+                            os.environ[key] = value
 
 
 if __name__ == '__main__':
