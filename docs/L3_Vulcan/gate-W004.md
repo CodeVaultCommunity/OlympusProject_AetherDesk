@@ -70,7 +70,7 @@ Medições específicas: `scripts/measure_wsl_pty.py` registrou 20 ecos WSS, p50
 - Backup de arquivo em alteração é best-effort e não é snapshot atômico. O ensaio foi quiescente; host final precisa definir consistência para cargas ativas.
 - Métricas de CPU compartilhada ficam indisponíveis quando fontes têm denominadores diferentes. A UI mostra `null`/indisponível, não zero. Métricas de host local não representam o servidor Linux futuro.
 - O limite de 8 MiB e o agente Python executado por operação simplificam segurança, mas elevam latência; quotas de armazenamento por usuário ainda dependem de configuração/validação no host.
-- TLS, cookies `Secure` sob proxy, WebSocket `wss`, Caddy, systemd após reboot, permissões do arquivo de segredos, backup agendado/restore no host e rollback ainda não foram executados. [Procedimento preparado](operations.md).
+- Na distribuição WSL dedicada, HTTPS com CA local, cookies `Secure` sob proxy, WebSocket `wss`, Caddy, systemd após reabertura, permissões dos segredos, backup agendado com restauração e reversão foram ensaiados conforme as evidências acima. Boot real, certificado público, rede, quotas, consistência de backup sob escrita ativa e desempenho do servidor independente continuam pendentes de validação antes da produção. [Procedimento operacional](operations.md).
 
 ## Decisão do portão
 
