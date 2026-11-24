@@ -6,7 +6,7 @@ export default defineConfig({
   timeout: 20_000,
   expect: { timeout: 5_000 },
   outputDir: './.tmp/playwright-results',
-  reporter: 'list',
+  reporter: process.env.GITHUB_ACTIONS ? [['list'], ['github']] : 'list',
   use: { baseURL: process.env.AETHERDESK_E2E_BASE_URL || 'http://127.0.0.1:5173',
     screenshot: 'only-on-failure' },
   projects: [

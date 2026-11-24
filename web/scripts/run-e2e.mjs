@@ -1,9 +1,17 @@
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { once } from 'node:events';
 import { createServer } from 'node:net';
 import { resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
+// A primeira importação lazy do Monaco pode iniciar optimizeDeps e provocar
+// reload em páginas de outros workers. Aquecer o cache antes do navegador.
+const optimizer = spawnSync(process.execPath,
+  [resolve(root, 'node_modules/vite/bin/vite.js'), 'optimize'],
+  { cwd: root, encoding: 'utf8', timeout: 60_000, windowsHide: true });
+if (optimizer.error || optimizer.status !== 0) {
+  throw new Error(`Pré-otimização Vite falhou: ${optimizer.error || optimizer.stderr}`);
+}
 const reservation = createServer();
 reservation.listen(0, '127.0.0.1');
 await once(reservation, 'listening');

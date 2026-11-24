@@ -5,7 +5,12 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   server: { watch: { ignored: ['**/.tmp/**'] } },
   optimizeDeps: {
+    // Evitar descoberta tardia durante os E2E: uma nova otimização recarrega
+    // as páginas de todos os workers e descarta o estado do editor.
+    noDiscovery: true,
     include: [
+      'react', 'react/jsx-dev-runtime', 'react-dom', 'react-dom/client',
+      '@monaco-editor/react', '@xterm/xterm', '@xterm/addon-fit',
       'monaco-editor/editor/editor.api',
       'monaco-editor/editor/contrib/find/browser/findController',
       'monaco-editor/language/typescript/monaco.contribution',
