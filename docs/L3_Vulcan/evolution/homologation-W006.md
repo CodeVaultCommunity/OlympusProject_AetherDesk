@@ -17,13 +17,15 @@ Reprodução no PowerShell, a partir da raiz do projeto, com o candidate local c
 ```powershell
 $project = (Resolve-Path .).Path
 Expand-Archive .tmp/release-candidate/aetherdesk-candidate.zip .tmp/w006-candidate -Force
-docker build -f deploy/Dockerfile.playwright-w006 -t aetherdesk-playwright:w006 web
+docker build -f scripts/Dockerfile.playwright-w006 -t aetherdesk-playwright:w006 web
 docker run --rm --network none --shm-size=1g -v "${project}:/src:ro" -v "${project}\.tmp\w006-candidate:/candidate:ro" -v "${project}\.tmp:/evidence" aetherdesk-playwright:w006 bash /src/scripts/verify_candidate_browser.sh
 docker run --rm --network none --shm-size=1g -v "${project}:/src:ro" -v "${project}\.tmp\w006-candidate:/candidate:ro" -v "${project}\.tmp:/evidence" aetherdesk-playwright:w006 bash /src/scripts/verify_candidate_browser.sh --native-probe chromium firefox webkit
 docker run --rm --network none --shm-size=1g -v "${project}:/src:ro" -v "${project}\.tmp\w006-candidate:/candidate:ro" -v "${project}\.tmp:/evidence" aetherdesk-playwright:w006 bash /src/scripts/verify_candidate_browser.sh --screen-reader-probe
 ```
 
 `--tab-menu-probe chromium` e `--tab-menu-probe firefox` com `AETHERDESK_DUPLICATE_TAB=1` reproduzem as duplicações. A regressão backend usa `scripts/homologate_candidate.py --archive /src/.tmp/release-candidate/aetherdesk-candidate.zip --sha256 9f6d75022c942993d9ff4d3a9543ffd1bc3230785389e51e4e2538a4f1514db2` na imagem broker fixture W005, `--network none`, `/tmp` efêmero e socket Docker somente no container de teste. `scripts/verify_candidate_recovery.py` repete os três restores. As quatro imagens temporárias de browser W006 foram removidas após a prova; a receita versionada permite reconstruí-las.
+
+O [run CI #4](https://github.com/CodeVaultCommunity/OlympusProject_AetherDesk/actions/runs/45430698309) do commit `e1a3111` aprovou frontend, backend, security e release, mas publicou ZIP `81a680b753b3e6c71b9cbb4e8d36c6789d36b6db4514120d5078fcea51514593`: o builder inclui `deploy/` recursivamente, e o Dockerfile descartável de teste havia sido colocado ali. O SBOM permaneceu idêntico. Esse ZIP variante **não foi o candidate homologado**. O Dockerfile de teste foi movido para `scripts/`, fora do pacote. Reconstrução local após a correção produziu novamente 116 arquivos, 285 pacotes e o SHA-256 aprovado `9f6d75022c942993d9ff4d3a9543ffd1bc3230785389e51e4e2538a4f1514db2`; o Dockerfile movido também construiu com sucesso. A CI do commit de correção serve para confirmar essa identidade no remoto.
 
 ## Comportamento e acessibilidade
 

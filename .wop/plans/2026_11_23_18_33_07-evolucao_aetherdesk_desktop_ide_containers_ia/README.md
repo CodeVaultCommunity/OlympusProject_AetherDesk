@@ -4,9 +4,9 @@ title: Evoluir o AetherDesk com desktop, IDE, containers e IA governada
 version: 5
 language: pt-BR
 complexity: extensive
-plan_status: in_progress
+plan_status: accepted
 execution_status: executed
-acceptance_status: pending
+acceptance_status: accepted
 created_at: 2026-11-22T20:43:13-03:00
 updated_at: 2026-11-23T18:33:07-03:00
 ---
