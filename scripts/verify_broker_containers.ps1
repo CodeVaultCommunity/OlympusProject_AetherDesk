@@ -152,7 +152,7 @@ try {
     & docker restart $brokerName | Out-Null
     Assert-DockerExit 'reiniciar broker'
     & docker exec $brokerName python -c `
-        "from pathlib import Path; import stat,sqlite3; p=Path('/audit/audit.log'); n=Path('/audit/nonces.sqlite3'); t=p.read_text(); assert stat.S_IMODE(p.stat().st_mode) == 0o600; assert stat.S_IMODE(n.stat().st_mode) == 0o600; assert sqlite3.connect(n).execute('SELECT COUNT(*) FROM broker_nonces').fetchone()[0] > 0; assert 'operation=' in t and 'result=ok' in t and 'fixture-password' not in t and 'broker fixture' not in t; print('AETHERDESK_AUDIT_AND_NONCES_PERSISTED=ok')"
+        "from pathlib import Path; import stat,sqlite3; p=Path('/audit/audit.log'); n=Path('/data/broker-nonces.sqlite3'); t=p.read_text(); assert stat.S_IMODE(p.stat().st_mode) == 0o600; assert stat.S_IMODE(n.stat().st_mode) == 0o600; assert sqlite3.connect(n).execute('SELECT COUNT(*) FROM broker_nonces').fetchone()[0] > 0; assert 'operation=' in t and 'result=ok' in t and 'fixture-password' not in t and 'broker fixture' not in t; print('AETHERDESK_AUDIT_AND_NONCES_PERSISTED=ok')"
     Assert-DockerExit 'auditoria durável após restart'
     $reconciled = & docker exec $webName python -B scripts/verify_broker_container.py --reconcile 2>&1
     $reconcileExit = $LASTEXITCODE

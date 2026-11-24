@@ -1,0 +1,11 @@
+FROM mcr.microsoft.com/playwright:v1.65.1-noble@sha256:1507cbfc550a63a6b7396791ca4f00df17beb56342d2447b3f106c306f525579
+
+RUN npm install --silent --global pnpm@11.25.0 \
+    && DEBIAN_FRONTEND=noninteractive apt-get update -qq \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
+      xdotool scrot orca speech-dispatcher dbus-x11 at-spi2-core python3-pyatspi \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /work/web
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile

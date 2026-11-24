@@ -5,8 +5,8 @@ version: 5
 language: pt-BR
 complexity: extensive
 plan_status: in_progress
-execution_status: in_progress
-acceptance_status: not_evaluated
+execution_status: executed
+acceptance_status: pending
 created_at: 2026-11-22T20:43:13-03:00
 updated_at: 2026-11-23T18:33:07-03:00
 ---

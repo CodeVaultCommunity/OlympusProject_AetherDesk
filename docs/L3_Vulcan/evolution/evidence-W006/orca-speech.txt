@@ -1,0 +1,18 @@
+Orca 46.1, Firefox Nightly, Xvfb, dados sintéticos, 24/11/2026.
+Trechos SPEECH OUTPUT do log local .tmp/w006-orca-firefox.log:
+
+Explorador push button.
+Arquivos e pastas.
+Editor push button.
+Terminal push button.
+Monitor push button.
+Administração push button.
+Configurações push button.
+Preferências pessoais.
+Maximizar push button.
+Fechar push button.
+AetherDesk document web.
+
+O script probe_screen_reader.mjs conferiu foco nos seis atalhos,
+abertura de Configurações e fechamento por Return. Log completo é
+descartável e não contém dados reais.

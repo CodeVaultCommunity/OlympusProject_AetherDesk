@@ -6,7 +6,9 @@ import base64
 import os
 import socket
 import sqlite3
+import statistics
 import time
+import math
 from contextlib import closing
 from pathlib import Path
 
@@ -35,6 +37,27 @@ def main() -> None:
     _exec_id, channel = client.open_terminal(actor.account_id, environment_id, terminal_id)
     attachments = []
     try:
+        channel.settimeout(5)
+        samples = []
+        pending = b''
+        for index in range(31):
+            marker = f'AETHERDESK_PTY_ECHO_{index:02d}_'.encode()
+            started_echo = time.perf_counter()
+            channel.sendall(b'echo ' + marker + b'\n')
+            while marker not in pending:
+                pending += channel.recv(65536)
+                if len(pending) > 65536:
+                    raise RuntimeError('PTY echo marker not received')
+            pending = pending.split(marker, 1)[1]
+            if index:
+                samples.append((time.perf_counter() - started_echo) * 1000)
+        ordered = sorted(samples)
+        print('AETHERDESK_PTY_ECHO=' + str({
+            'samples': len(samples), 'p50_ms': round(statistics.median(samples), 2),
+            'p95_ms': round(ordered[math.ceil(.95 * len(samples)) - 1], 2),
+            'p99_ms': round(ordered[math.ceil(.99 * len(samples)) - 1], 2),
+            'scope': 'broker socket to PTY echo; excludes browser and WSS',
+        }), flush=True)
         channel.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 4096)
         started = time.monotonic()
         channel.sendall(b'python3 -c "import sys;sys.stdout.buffer.write(b\'x\'*8388608)"\n')

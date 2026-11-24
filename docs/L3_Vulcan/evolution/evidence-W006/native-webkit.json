@@ -1,0 +1,307 @@
+{
+  "nativeZoomProbe": [
+    {
+      "engine": "webkit",
+      "outer": {
+        "width": 1920,
+        "height": 1080
+      },
+      "baseline": {
+        "percent": 100,
+        "width": 1920,
+        "iconsReachable": true,
+        "launcherPointerReachable": true,
+        "launcherOverlap": null,
+        "closeReachable": true,
+        "closePointerReachable": true,
+        "overlap": null,
+        "unexpectedWindows": 0
+      },
+      "plus": [
+        {
+          "percent": 120,
+          "width": 1599,
+          "iconsReachable": true,
+          "launcherPointerReachable": true,
+          "launcherOverlap": null,
+          "closeReachable": true,
+          "closePointerReachable": true,
+          "overlap": null,
+          "unexpectedWindows": 0
+        },
+        {
+          "percent": 144,
+          "width": 1333,
+          "iconsReachable": true,
+          "launcherPointerReachable": true,
+          "launcherOverlap": null,
+          "closeReachable": true,
+          "closePointerReachable": true,
+          "overlap": null,
+          "unexpectedWindows": 0
+        },
+        {
+          "percent": 173,
+          "width": 1111,
+          "iconsReachable": true,
+          "launcherPointerReachable": true,
+          "launcherOverlap": null,
+          "closeReachable": true,
+          "closePointerReachable": true,
+          "overlap": null,
+          "unexpectedWindows": 0
+        },
+        {
+          "percent": 207,
+          "width": 925,
+          "iconsReachable": true,
+          "launcherPointerReachable": true,
+          "launcherOverlap": null,
+          "closeReachable": true,
+          "closePointerReachable": true,
+          "overlap": null,
+          "unexpectedWindows": 0
+        }
+      ],
+      "minus": [
+        {
+          "percent": 83,
+          "width": 2304,
+          "iconsReachable": true,
+          "launcherPointerReachable": true,
+          "launcherOverlap": null,
+          "closeReachable": true,
+          "closePointerReachable": true,
+          "overlap": null,
+          "unexpectedWindows": 0
+        },
+        {
+          "percent": 69,
+          "width": 2764,
+          "iconsReachable": true,
+          "launcherPointerReachable": true,
+          "launcherOverlap": null,
+          "closeReachable": true,
+          "closePointerReachable": true,
+          "overlap": null,
+          "unexpectedWindows": 0
+        },
+        {
+          "percent": 58,
+          "width": 3317,
+          "iconsReachable": true,
+          "launcherPointerReachable": true,
+          "launcherOverlap": null,
+          "closeReachable": true,
+          "closePointerReachable": true,
+          "overlap": null,
+          "unexpectedWindows": 0
+        }
+      ],
+      "rangeReached": true,
+      "controlsReachable": true
+    },
+    {
+      "engine": "webkit",
+      "outer": {
+        "width": 1366,
+        "height": 768
+      },
+      "baseline": {
+        "percent": 100,
+        "width": 1366,
+        "iconsReachable": true,
+        "launcherPointerReachable": true,
+        "launcherOverlap": null,
+        "closeReachable": true,
+        "closePointerReachable": true,
+        "overlap": null,
+        "unexpectedWindows": 0
+      },
+      "plus": [
+        {
+          "percent": 120,
+          "width": 1138,
+          "iconsReachable": true,
+          "launcherPointerReachable": true,
+          "launcherOverlap": null,
+          "closeReachable": true,
+          "closePointerReachable": true,
+          "overlap": null,
+          "unexpectedWindows": 0
+        },
+        {
+          "percent": 144,
+          "width": 948,
+          "iconsReachable": true,
+          "launcherPointerReachable": true,
+          "launcherOverlap": null,
+          "closeReachable": true,
+          "closePointerReachable": true,
+          "overlap": null,
+          "unexpectedWindows": 0
+        },
+        {
+          "percent": 173,
+          "width": 790,
+          "iconsReachable": true,
+          "launcherPointerReachable": true,
+          "launcherOverlap": null,
+          "closeReachable": true,
+          "closePointerReachable": true,
+          "overlap": null,
+          "unexpectedWindows": 0
+        },
+        {
+          "percent": 207,
+          "width": 658,
+          "iconsReachable": true,
+          "launcherPointerReachable": true,
+          "launcherOverlap": null,
+          "closeReachable": true,
+          "closePointerReachable": true,
+          "overlap": null,
+          "unexpectedWindows": 0
+        }
+      ],
+      "minus": [
+        {
+          "percent": 83,
+          "width": 1639,
+          "iconsReachable": true,
+          "launcherPointerReachable": true,
+          "launcherOverlap": null,
+          "closeReachable": true,
+          "closePointerReachable": true,
+          "overlap": null,
+          "unexpectedWindows": 0
+        },
+        {
+          "percent": 69,
+          "width": 1967,
+          "iconsReachable": true,
+          "launcherPointerReachable": true,
+          "launcherOverlap": null,
+          "closeReachable": true,
+          "closePointerReachable": true,
+          "overlap": null,
+          "unexpectedWindows": 0
+        },
+        {
+          "percent": 58,
+          "width": 2360,
+          "iconsReachable": true,
+          "launcherPointerReachable": true,
+          "launcherOverlap": null,
+          "closeReachable": true,
+          "closePointerReachable": true,
+          "overlap": null,
+          "unexpectedWindows": 0
+        }
+      ],
+      "rangeReached": true,
+      "controlsReachable": true
+    },
+    {
+      "engine": "webkit",
+      "outer": {
+        "width": 1024,
+        "height": 768
+      },
+      "baseline": {
+        "percent": 100,
+        "width": 1024,
+        "iconsReachable": true,
+        "launcherPointerReachable": true,
+        "launcherOverlap": null,
+        "closeReachable": true,
+        "closePointerReachable": true,
+        "overlap": null,
+        "unexpectedWindows": 0
+      },
+      "plus": [
+        {
+          "percent": 120,
+          "width": 853,
+          "iconsReachable": true,
+          "launcherPointerReachable": true,
+          "launcherOverlap": null,
+          "closeReachable": true,
+          "closePointerReachable": true,
+          "overlap": null,
+          "unexpectedWindows": 0
+        },
+        {
+          "percent": 144,
+          "width": 711,
+          "iconsReachable": true,
+          "launcherPointerReachable": true,
+          "launcherOverlap": null,
+          "closeReachable": true,
+          "closePointerReachable": true,
+          "overlap": null,
+          "unexpectedWindows": 0
+        },
+        {
+          "percent": 173,
+          "width": 592,
+          "iconsReachable": true,
+          "launcherPointerReachable": true,
+          "launcherOverlap": null,
+          "closeReachable": true,
+          "closePointerReachable": true,
+          "overlap": null,
+          "unexpectedWindows": 0
+        },
+        {
+          "percent": 207,
+          "width": 493,
+          "iconsReachable": true,
+          "launcherPointerReachable": true,
+          "launcherOverlap": null,
+          "closeReachable": true,
+          "closePointerReachable": true,
+          "overlap": null,
+          "unexpectedWindows": 0
+        }
+      ],
+      "minus": [
+        {
+          "percent": 83,
+          "width": 1228,
+          "iconsReachable": true,
+          "launcherPointerReachable": true,
+          "launcherOverlap": null,
+          "closeReachable": true,
+          "closePointerReachable": true,
+          "overlap": null,
+          "unexpectedWindows": 0
+        },
+        {
+          "percent": 69,
+          "width": 1474,
+          "iconsReachable": true,
+          "launcherPointerReachable": true,
+          "launcherOverlap": null,
+          "closeReachable": true,
+          "closePointerReachable": true,
+          "overlap": null,
+          "unexpectedWindows": 0
+        },
+        {
+          "percent": 58,
+          "width": 1769,
+          "iconsReachable": true,
+          "launcherPointerReachable": true,
+          "launcherOverlap": null,
+          "closeReachable": true,
+          "closePointerReachable": true,
+          "overlap": null,
+          "unexpectedWindows": 0
+        }
+      ],
+      "rangeReached": true,
+      "controlsReachable": true
+    }
+  ]
+}

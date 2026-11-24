@@ -1,0 +1,55 @@
+# W006/I014 — homologação técnica local do candidate
+
+Plano `c1cf6012-e0a4-4f5a-a7fc-52a6ff0363fd` v5, em 24/11/2026. Escopo autorizado: Docker Desktop Linux descartável, dados sintéticos, proxy público e egress externo desligados. O portão W005 foi aprovado em `gate-W005.md`. Este relatório testa o candidate **imutável** do commit `44b4152bf6547ace7ea192adf447383c279be067`, não a árvore de trabalho posterior.
+
+## Identidade e ambiente
+
+| Item | Evidência |
+|---|---|
+| Candidate ZIP | `.tmp/release-candidate/aetherdesk-candidate.zip`, 15.491.995 bytes, SHA-256 `9f6d75022c942993d9ff4d3a9543ffd1bc3230785389e51e4e2538a4f1514db2`; manifesto interno verificado antes de extrair. |
+| SBOM SPDX | 285 pacotes, SHA-256 `febe6d67a20cf7638d2f2fccb290bac75185b1ea82008f6fd0832ca87c762051`. Os hashes do ZIP e SBOM coincidem com as anotações do [run CI #3](https://github.com/CodeVaultCommunity/OlympusProject_AetherDesk/actions/runs/45408601796), que aprovou frontend, backend, security e release. |
+| Host local | Docker Desktop 28.3.3, Linux x86_64, kernel `6.6.87.2-microsoft-standard-WSL2`, overlayfs, 20.887.822.336 bytes de memória informados pelo daemon. Docker Desktop/WSL2 não representa host Linux independente. |
+| Runtimes de prova | Fixture Python 3.13.18; Playwright 1.65.1 em Ubuntu Noble com Chromium, Firefox e WebKit; Orca 46.1 em Firefox/Xvfb. Imagens temporárias de browser foram construídas com `aetherdesk-playwright:w006`, `aetherdesk-playwright-ui:w006` e `aetherdesk-playwright-orca:w006`. |
+| Segurança da fixture | `--network none` para browser e regressão; ASGI e dados de teste efêmeros; sem conta real. O teste de broker usa socket Docker somente no processo privilegiado de fixture e confirma que o web não tem socket, grupo nem descritor aberto do daemon. |
+
+Reprodução no PowerShell, a partir da raiz do projeto, com o candidate local cujo hash consta acima:
+
+```powershell
+$project = (Resolve-Path .).Path
+Expand-Archive .tmp/release-candidate/aetherdesk-candidate.zip .tmp/w006-candidate -Force
+docker build -f deploy/Dockerfile.playwright-w006 -t aetherdesk-playwright:w006 web
+docker run --rm --network none --shm-size=1g -v "${project}:/src:ro" -v "${project}\.tmp\w006-candidate:/candidate:ro" -v "${project}\.tmp:/evidence" aetherdesk-playwright:w006 bash /src/scripts/verify_candidate_browser.sh
+docker run --rm --network none --shm-size=1g -v "${project}:/src:ro" -v "${project}\.tmp\w006-candidate:/candidate:ro" -v "${project}\.tmp:/evidence" aetherdesk-playwright:w006 bash /src/scripts/verify_candidate_browser.sh --native-probe chromium firefox webkit
+docker run --rm --network none --shm-size=1g -v "${project}:/src:ro" -v "${project}\.tmp\w006-candidate:/candidate:ro" -v "${project}\.tmp:/evidence" aetherdesk-playwright:w006 bash /src/scripts/verify_candidate_browser.sh --screen-reader-probe
+```
+
+`--tab-menu-probe chromium` e `--tab-menu-probe firefox` com `AETHERDESK_DUPLICATE_TAB=1` reproduzem as duplicações. A regressão backend usa `scripts/homologate_candidate.py --archive /src/.tmp/release-candidate/aetherdesk-candidate.zip --sha256 9f6d75022c942993d9ff4d3a9543ffd1bc3230785389e51e4e2538a4f1514db2` na imagem broker fixture W005, `--network none`, `/tmp` efêmero e socket Docker somente no container de teste. `scripts/verify_candidate_recovery.py` repete os três restores. As quatro imagens temporárias de browser W006 foram removidas após a prova; a receita versionada permite reconstruí-las.
+
+## Comportamento e acessibilidade
+
+- `scripts/homologate_candidate.py` conferiu ZIP/manifesto, importou módulos **da extração** e executou **138 testes Python, zero skips**. Cobrem contratos, sessão/capacidades, IDOR, symlink, WebSocket revogado, HMAC/nonce, isolamento, build de instruções fixas, proxy contra SSRF/metadata/rebinding, approvals exatos/replay, cofre, migrações, jobs, backup e jornadas integradas. A fixture usa Docker real nos casos marcados com `AETHERDESK_DOCKER_TEST=1`. Avisos de fechamento de respostas `urllib3` persistem, sem falha de teste.
+- O build `web/dist` **extraído do mesmo ZIP** foi servido por Vite preview apenas em loopback dentro do container. `web/tests/candidate/production.spec.ts` testa seis launchers, janela/Fechar, cinco escalas CSS equivalentes em três resoluções, touch 390×844 e 768×1024, teclado, contraste forçado, movimento reduzido e axe WCAG A/AA nos três motores. `process-crash.spec.ts` mata por `SIGKILL` o processo real de Firefox e WebKit, reabre o mesmo perfil e recupera rascunho/tema. Chromium possui prova equivalente na suíte W002/W005. A execução consolidada terminou com **59 aprovados, um skip intencional (crash Chromium já coberto), zero falhas, em 1,3 min**.
+- Zoom **nativo**, com atalhos reais `Ctrl++`, `Ctrl+-` e `Ctrl+0` na janela Xvfb: 99 combinações efetivas. Chromium alcançou 67–200%, Firefox 60–200% e WebKit 58–207% em 1920×1080, 1366×768 e 1024×768. Em todas, os seis atalhos receberam foco e Configurações/Fechar foram acionados por ponteiro: zero falhas finais. Relatórios por amostra: [Chromium](evidence-W006/native-chromium.json), [Firefox](evidence-W006/native-firefox.json) e [WebKit](evidence-W006/native-webkit.json). No Firefox, o input do Playwright apontava para botão adjacente após zoom; `document.elementFromPoint` via DOM identificava o alvo correto e o clique físico do Xvfb abriu/fechou a janela. O ensaio final usa esse clique físico para Firefox; isso é uma limitação da automação sob zoom, não uma correção de produto.
+- Duplicação **pelo menu real da aba** passou em [Chromium](evidence-W006/chromium-tab-menu.png) e [Firefox](evidence-W006/firefox-tab-menu.png): duas páginas no mesmo contexto, ID da aba duplicada diferente do original e ID original estável. O [minibrowser WebKit](evidence-W006/webkit-minibrowser.png) do Playwright não oferece abas nem opção de duplicação; o teste de `sessionStorage` clonado em WebKit passou na suíte W002, mas a ação nativa é inaplicável nesse executável.
+- Orca 46.1 sobre Firefox, D-Bus e Xvfb anunciou **Explorador, Editor, Terminal, Monitor, Administração e Configurações** como botões com seus títulos, além de Maximizar e Fechar. O teclado físico percorreu os seis atalhos, abriu Configurações e fechou a janela. O log local `.tmp/w006-orca-firefox.log` contém `SPEECH OUTPUT` para cada nome; o script `web/scripts/probe_screen_reader.mjs` reproduz o percurso. Esta prova cobre uma jornada principal com Orca/Firefox, não todas as combinações de leitores e navegadores.
+- A inspeção visual interativa do bundle no navegador integrado do Codex cobriu 1280×720 e 240×320: último atalho acessível com rolagem; controles Minimizar, Maximizar e Fechar alcançados por teclado. Não foi usado o Brave pessoal, conforme D013.
+
+## Desempenho e pressão
+
+| Cenário sintético | Amostra e medida | Interpretação |
+|---|---|---|
+| Login Argon2id | 20 contas, 8 concorrentes, 240 amostras aquecidas: p95 460,15 ms, p99 504,27 ms; frio p95 398,99 ms. | Serviço local, sem HTTP e sem latência do daemon. |
+| Listagem/arquivo com broker real | 20 contas, 8 ambientes ativos, 8 clientes, 240 amostras por operação: 100 entradas p95 333,72 ms; leitura 1 MiB p95 466,45 ms; zero erros. | Cache aquecido no Docker Desktop; não é SLO de host independente. |
+| Dataset broker ABBA | 30 amostras por caminho: 100 entradas broker p95 43,01 ms e direto v1 232,84 ms; 10.000 entradas broker p95 200,32 ms e direto v1 468,14 ms; 10.001ª recusada. | Uma conta medida; ordem alternada, cache aquecido. |
+| PTY e métricas | Fixture Docker com 30 ecos no socket broker→PTY: p50 2,67 ms, p95/p99 2,99 ms. Estado p95 45,2 ms; listagem incidental p95 45,0 ms; métricas p95 44,1 ms, 30 amostras cada. | Eco exclui browser/WSS. Pressão de 8 MiB fechou relay em 13,27 s e recuperou quatro slots. |
+| Jobs de workload | 20 owners, 100 workloads, 8 workers: 100 starts únicos, request p95 59,169 ms, reconcile p95 65,433 ms, 0,577 s total. | SQLite e runtime fake; não mede pull/build/deploy Docker. |
+| Workspace | 10.000 arquivos: lista de primeira página p95 44,7 ms; busca indexada p95 0,28 ms; construção de índice 746,82 ms; busca por varredura p95 449,99 ms em 3 amostras. | Módulos do ZIP em fixture Linux, sem rede. |
+
+O teste Docker de broker confirmou isolamento de duas contas, revogação, quotas, retomada após falha/restart, persistência de auditoria e nonces. Outra execução forçou rotação com 12.000 requisições; não constitui soak longo de produção. Metas de `architecture.md` para servidor independente (inclusive CPU de métricas <2%, PTY WSS <150 ms, build/deploy/Git/IA) continuam **hipóteses de capacidade**. A decisão U009 fixa RPO/RTO configuráveis sem padrão global. Nenhum número local foi promovido a compromisso operacional.
+
+## Segurança, recuperação e limites
+
+- O artefato de segurança do runner tem SHA-256 `73a351c3b4414bc26ccb71b53f64dc24be401cd5d1645bf21abbc3edd2ae384c`. Os quatro relatórios hospedados indicam zero críticos na imagem, zero altos com correção disponível, zero altos/críticos nos locks e **86 HIGH residuais, 27 IDs, Debian 13.8, sem `FixedVersion`**. Comparação com Trivy local em ID, pacote, versão instalada/corrigida, status e severidade: zero diferenças. O responsável aceitou esses 86 achados **somente para Docker local com dados sintéticos**. `security-review-W005.md` contém a triagem.
+- `verify_candidate_recovery.py` extraiu o ZIP e passou três ensaios, sem skips: migração v1 e forward recovery em 0,383 s; snapshot/restore de contas, permissões, desktop e volumes em 32,825 s; backup v2 AES-256-GCM/restore de workloads, IA, nonces e volumes em 17,236 s. A suíte completa levou 50,444 s. Um orçamento **de fixture** de 60 s para cada cenário sintético foi observado; cobre backup e restauração no mesmo caso, portanto não fornece RTO de host real. A prova mostra consistência dos dados modelados no snapshot imediato, não RPO entre snapshots. Chave errada falha fechada; código v1 sobre banco já migrado não foi ensaiado, e o rollback suportado restaura snapshot v1.
+- Build hostil por Dockerfile arbitrário permanece bloqueado por projeto; o builder usa instruções geradas e base aprovada. Git remoto, providers IA, MCP externo, proxy público e egress externo ficam fechados por padrão. Não houve tráfego a endpoints reais nem publicação de workload. Política de conteúdo/admin e provas negativas ficam em `security-review-W003.md`, `gate-W005.md` e testes da regressão do ZIP.
+- A homologação local não comprova unidades systemd em host independente, custódia e cópia off-host de chaves/backups, operação de proxy/TLS/domínio/registry reais, notices jurídicos de distribuição, métrica de CPU do host, nem carga/soak e SLOs de produção. `operations.md` mantém essas exigências. Distribuição e produção exigem nova varredura e decisão separada de risco, além de ambiente e janela de mudança aprovados.

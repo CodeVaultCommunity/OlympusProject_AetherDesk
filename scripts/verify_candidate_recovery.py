@@ -9,6 +9,7 @@ import os
 import shutil
 import sys
 import tempfile
+import time
 import unittest
 import zipfile
 from pathlib import Path
@@ -24,6 +25,17 @@ TESTS = (
     'apps.AetherDesk.composition.test_upgrade.UpgradeTests',
     'apps.AetherDesk.backup.test_service.BackupTests',
 )
+
+
+class TimedResult(unittest.TextTestResult):
+    def startTest(self, test: unittest.TestCase) -> None:
+        self._started = time.perf_counter()
+        super().startTest(test)
+
+    def stopTest(self, test: unittest.TestCase) -> None:
+        elapsed = time.perf_counter() - self._started
+        print(f'CANDIDATE_RECOVERY_DURATION test={test.id()} seconds={elapsed:.3f}')
+        super().stopTest(test)
 
 
 def verify(archive: Path) -> None:
@@ -51,7 +63,7 @@ def verify(archive: Path) -> None:
                 raise RuntimeError(f'Source tree imported instead of candidate: {module.__file__}')
         suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromName(name)
                                    for name in TESTS)
-        outcome = unittest.TextTestRunner(verbosity=2).run(suite)
+        outcome = unittest.TextTestRunner(verbosity=2, resultclass=TimedResult).run(suite)
         if not outcome.wasSuccessful() or outcome.testsRun != 3 or outcome.skipped:
             raise RuntimeError('Candidate recovery suite failed or was incomplete')
         print(f'CANDIDATE_RECOVERY_OK sha256={archive_hash} tests={outcome.testsRun}')
