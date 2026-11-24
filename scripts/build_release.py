@@ -13,6 +13,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 FILE_TYPES = {'.py', '.sql', '.service', '.txt'}
+PLATFORM_LICENSES = {('pywin32', '312'): 'PSF'}
 
 
 def digest(value: bytes) -> str:
@@ -71,6 +72,8 @@ def sbom() -> dict:
             license_name = distribution.metadata.get('License-Expression') or distribution.metadata.get('License')
         except metadata.PackageNotFoundError:
             license_name = None
+        # pywin32 is pinned in the cross-platform lock but absent on Linux runners.
+        license_name = license_name or PLATFORM_LICENSES.get((name.lower(), version))
         packages.append({'SPDXID': f'SPDXRef-Py-{name.replace("_", "-")}',
                          'name': name, 'versionInfo': version, 'downloadLocation': 'NOASSERTION',
                          'filesAnalyzed': False, 'licenseDeclared': license_name or 'NOASSERTION',

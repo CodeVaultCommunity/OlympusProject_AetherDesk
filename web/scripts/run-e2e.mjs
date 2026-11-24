@@ -32,17 +32,19 @@ for (const stream of [server.stdout, server.stderr]) {
 
 async function ready() {
   const deadline = Date.now() + 20_000;
+  let lastProbe = 'nenhuma resposta';
   while (Date.now() < deadline) {
     if (server.exitCode !== null) throw new Error(`Vite encerrou: ${serverOutput}`);
     try {
       const response = await fetch(`${baseURL}/?fixture=1`);
-      if (response.ok && serverOutput.includes(baseURL) &&
-          (await response.text()).includes('<title>AetherDesk</title>') &&
+      const html = await response.text();
+      lastProbe = `HTTP ${response.status}, título=${html.includes('<title>AetherDesk</title>')}`;
+      if (response.ok && html.includes('<title>AetherDesk</title>') &&
           server.exitCode === null) return;
-    } catch { /* aguardando a porta */ }
+    } catch (error) { lastProbe = String(error); }
     await new Promise(done => setTimeout(done, 100));
   }
-  throw new Error(`Vite não iniciou em 20 s: ${serverOutput}`);
+  throw new Error(`Vite não iniciou em 20 s (${lastProbe}): ${serverOutput}`);
 }
 
 try {

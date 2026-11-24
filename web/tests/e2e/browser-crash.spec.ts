@@ -78,12 +78,16 @@ test('rascunho sobrevive ao encerramento do processo Chromium', async ({ browser
     await expect(first.locator('.desktop.light')).toBeVisible();
     await expect.poll(() => first.evaluate(() => Object.keys(localStorage)
       .some(key => key.startsWith('aetherdesk-desktop-draft:process-crash-fixture:')))).toBe(true);
+    // Chromium grava localStorage no perfil em lote; o crash deve ocorrer após o commit em disco.
+    await first.waitForTimeout(5_000);
     await kill();
 
     const secondContext = await launch();
     const second = await secondContext.newPage();
     await second.goto(baseURL);
     await expect(second.locator('.launchers').getByRole('button', { name: /Configurações/ })).toBeVisible();
+    await expect.poll(() => second.evaluate(() => Object.keys(localStorage)
+      .filter(key => key.startsWith('aetherdesk-desktop-draft:process-crash-fixture:')).length)).toBeGreaterThan(0);
     await expect(second.getByRole('button', { name: 'Recuperar rascunho' })).toBeVisible();
     await second.getByRole('button', { name: 'Recuperar rascunho' }).click();
     await expect(second.locator('.desktop.light')).toBeVisible();
