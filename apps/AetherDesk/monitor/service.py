@@ -16,7 +16,12 @@ from apps.AetherDesk.runtime import DockerEnvironmentBroker
 
 class MetricsSource:
     def __init__(self, docker_client=None):
+        self._owns_docker = docker_client is None
         self.docker = docker_client or docker.from_env()
+
+    def close(self):
+        if self._owns_docker:
+            self.docker.close()
 
     def server(self):
         memory = psutil.virtual_memory()
@@ -74,6 +79,11 @@ class MonitorService:
         self.cache_seconds = cache_seconds
         self.cache = {}
 
+    def _environment_metrics(self, account_id: str, environment_id: str, container_name: str):
+        if hasattr(self.source, 'environment_for'):
+            return self.source.environment_for(account_id, environment_id)
+        return self.source.environment(container_name)
+
     def _sample(self, category: str, reference: str, read, cache_state: str | None = None):
         key = (category, reference, cache_state)
         if cache_state == 'running' and self.cache_seconds > 0:
@@ -105,7 +115,7 @@ class MonitorService:
         account = self.identity.account(actor, actor.account_id)
         env = self.runtime.state(actor.account_id, account['environment_id'])
         sample = self._sample('environment', actor.account_id,
-                              lambda: self.source.environment(env.container_name) if env.state == 'running'
+                              lambda: self._environment_metrics(actor.account_id, account['environment_id'], env.container_name) if env.state == 'running'
                               else {'state': env.state, 'cpu_percent': None, 'memory_bytes': None}, env.state)
         if env.state != 'running':
             sample['status'] = 'unavailable'
@@ -140,7 +150,7 @@ class MonitorService:
         for account in sorted(accounts, key=lambda row: row['username'].casefold()):
             env = self.runtime.state(account['id'], account['environment_id'])
             sample = self._sample('environment', account['id'],
-                            lambda name=env.container_name: self.source.environment(name) if env.state == 'running'
+                            lambda owner=account['id'], eid=account['environment_id'], name=env.container_name: self._environment_metrics(owner, eid, name) if env.state == 'running'
                             else {'state': env.state, 'cpu_percent': None, 'memory_bytes': None}, env.state)
             if env.state != 'running':
                 sample['status'] = 'unavailable'

@@ -18,6 +18,17 @@ class IdentityTests(unittest.TestCase):
         self.admin_id = self.service.bootstrap("bootstrap-secret", "admin", "strong-admin-password")
         self.admin_token, self.admin = self.service.login("admin", "strong-admin-password")
 
+    def test_optional_capabilities_require_feature_flag_even_with_override(self):
+        self.assertNotIn('ai.chat', self.service.capabilities(self.admin))
+        self.service.set_permission(self.admin, self.admin_id, 'ai.chat', True)
+        self.assertNotIn('ai.chat', self.service.capabilities(self.admin))
+        enabled = IdentityService(self.db_path, 'bootstrap-secret',
+                                  enabled_features=frozenset({'ai', 'workloads', 'ide'}))
+        self.assertIn('ai.chat', enabled.capabilities(self.admin))
+        self.assertIn('workloads.control.other', enabled.capabilities(self.admin))
+        self.assertIn('ide.open', enabled.capabilities(self.admin))
+        self.assertNotIn('workloads.build', enabled.capabilities(self.admin))
+
     def test_bootstrap_unique_and_password_hashed(self):
         with self.assertRaises(IdentityError) as raised:
             self.service.bootstrap("bootstrap-secret", "other", "another-strong-password")
@@ -48,7 +59,23 @@ class IdentityTests(unittest.TestCase):
             self.assertEqual([row[0] for row in db.execute(
                 "SELECT event FROM account_events WHERE account_id=? ORDER BY rowid",
                 (actor.account_id,))], ["account.created", "account.deleted"])
+            tombstone = db.execute('''SELECT owner_id,purge_after FROM lifecycle_tombstones
+                WHERE kind='account' AND resource_id=?''', (account_id,)).fetchone()
+            self.assertEqual(tombstone, (account_id, None))
         db.close()
+
+    def test_configured_account_retention_is_recorded_without_purging(self):
+        configured = IdentityService(self.db_path, 'bootstrap-secret', account_retention_seconds=3600)
+        account_id = configured.create_account(self.admin, 'bob', 'strong-bob-password')
+        account = configured.account(self.admin, account_id)
+        configured.update_account(self.admin, account_id, state='deleted', revision=account['revision'])
+        with closing(sqlite3.connect(self.db_path)) as db:
+            deleted_at, purge_after = db.execute('''SELECT deleted_at,purge_after
+                FROM lifecycle_tombstones WHERE kind='account' AND resource_id=?''',
+                (account_id,)).fetchone()
+            self.assertEqual(purge_after - deleted_at, 3600)
+            self.assertEqual(db.execute('SELECT count(*) FROM accounts WHERE id=?',
+                                        (account_id,)).fetchone()[0], 1)
 
     def test_revocation_and_permission_change_affect_open_context(self):
         account_id = self.service.create_account(self.admin, "alice", "strong-alice-password")

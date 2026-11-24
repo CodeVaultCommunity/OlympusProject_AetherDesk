@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from apps.AetherDesk.identity import IdentityService
 from apps.AetherDesk.runtime import DockerEnvironmentBroker
+from apps.AetherDesk.runtime.test_fixture import BrokerFixture
 from launch import create_app
 
 
@@ -22,7 +23,9 @@ class FileHttpTests(unittest.TestCase):
                 'AETHERDESK_CSRF_SECRET': 'csrf-secret-long-enough-for-testing-12345',
                 'AETHERDESK_ALLOW_INSECURE_LOCAL_HTTP': '1'})
             resources = []
+            broker = BrokerFixture(temp)
             try:
+                broker.start()
                 app = create_app()
                 with TestClient(app) as administrator, TestClient(app) as alice, TestClient(app) as bob:
                     administrator.post('/api/v1/bootstrap', json={'token': 'bootstrap-secret-long',
@@ -56,6 +59,7 @@ class FileHttpTests(unittest.TestCase):
                         content=b'x' * (8 * 1024 * 1024 + 1),
                         headers={'X-CSRF-Token': alice.cookies.get('aether_csrf')}).status_code, 413)
             finally:
+                broker.stop()
                 for container, volume in resources:
                     subprocess.run(['docker', 'container', 'rm', '--force', container], capture_output=True)
                     subprocess.run(['docker', 'volume', 'rm', volume], capture_output=True)

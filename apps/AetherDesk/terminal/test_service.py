@@ -65,6 +65,7 @@ class TerminalTests(unittest.TestCase):
                 terminal.close(alice3, terminal_id)
                 self.assertEqual(terminal.list(alice3)[0]["state"], "closed")
             finally:
+                terminal.shutdown()
                 subprocess.run(["docker", "container", "rm", "--force", container], capture_output=True)
                 subprocess.run(["docker", "volume", "rm", volume], capture_output=True)
 

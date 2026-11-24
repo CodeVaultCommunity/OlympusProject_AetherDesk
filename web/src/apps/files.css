@@ -1,6 +1,6 @@
 body { margin: 0; }
 .file-fixture { width: 100%; height: 100vh; background: #0f1731; color: #e8edff; padding: 24px; box-sizing: border-box; overflow: hidden; }
-.files-app { height: 100%; min-height: 300px; display: flex; flex-direction: column; background: #111a35; color: #e8edff; font: 13px 'DM Sans', system-ui, sans-serif; }
+.files-app { height: 100%; min-height: 0; display: flex; flex-direction: column; background: #111a35; color: #e8edff; font: 13px 'DM Sans', system-ui, sans-serif; }
 .files-app button { border: 0; background: transparent; color: inherit; cursor: pointer; }
 .files-toolbar { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 8px 12px; border-bottom: 1px solid #50608566; }
 .files-toolbar button, .editor-actions button, .open-path button { background: #7187da2e; border: 1px solid #8ba0ec4a; padding: 6px 10px; border-radius: 7px; color: #dbe4ff; }

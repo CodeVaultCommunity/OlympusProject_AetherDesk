@@ -1,13 +1,10 @@
 """Boundary HTTP de arquivos sem parâmetros de dono ou ambiente."""
 
-import hashlib
-import hmac
-import secrets
-
 from fastapi import APIRouter, Cookie, Header, HTTPException, Request, Response
 from pydantic import BaseModel
 
 from apps.AetherDesk.identity import IdentityError, IdentityService
+from apps.AetherDesk.support.http import require_mutation
 from .gateway import ContainerFileGateway
 from .service import FileError
 
@@ -34,12 +31,7 @@ def files_router(gateway: ContainerFileGateway, identity: IdentityService, csrf_
             raise HTTPException(401, exc.code) from exc
 
     def mutation(request, current, cookie, header):
-        origin = request.headers.get('origin')
-        if origin and origin.rstrip('/') != str(request.base_url).rstrip('/'):
-            raise HTTPException(403, 'INVALID_ORIGIN')
-        expected = hmac.new(csrf_secret.encode(), current.session_id.encode(), hashlib.sha256).hexdigest()
-        if not cookie or not header or not secrets.compare_digest(cookie, expected) or not secrets.compare_digest(header, expected):
-            raise HTTPException(403, 'INVALID_CSRF')
+        require_mutation(request, current.session_id, csrf_secret, cookie, header)
 
     def call(function):
         try:
@@ -48,7 +40,11 @@ def files_router(gateway: ContainerFileGateway, identity: IdentityService, csrf_
             raise HTTPException(403, exc.code) from exc
         except FileError as exc:
             status = {'NOT_FOUND': 404, 'CONFLICT': 409, 'STALE_REVISION': 412,
-                      'FORBIDDEN': 403, 'TOO_LARGE': 413, 'QUOTA': 507}.get(exc.code, 422)
+                      'FORBIDDEN': 403, 'TOO_LARGE': 413, 'QUOTA': 507,
+                      'BROKER_UNAVAILABLE': 503, 'BROKER_BUSY': 503,
+                      'BROKER_PROTOCOL': 503, 'RUNTIME_UNAVAILABLE': 503,
+                      'FILE_UNAVAILABLE': 503, 'UNAVAILABLE': 503,
+                      'UNKNOWN_WRITE_OUTCOME': 503}.get(exc.code, 422)
             raise HTTPException(status, exc.code) from exc
 
     @router.get('/list')

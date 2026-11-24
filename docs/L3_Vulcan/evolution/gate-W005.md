@@ -1,0 +1,27 @@
+# Portão W005 — integração e candidate
+
+Plano `c1cf6012-e0a4-4f5a-a7fc-52a6ff0363fd` v5. **I013 em progresso; W005 não aceita em 24/11/2026. W006 não iniciada.** A base de partida é `f0e1b6377226b5c56db2467f021c06c510fff6c0`; este registro distingue provas locais de CI e ambiente externo.
+
+Decisão do responsável em 24/11/2026: publicar `codex/aetherdesk-w005` no remoto `origin` para executar a CI; usar **Docker Linux descartável** como ambiente preferido de homologação W005/W006, sem VM fornecida. Essa decisão resolve o ambiente para aceite técnico local e não valida unidades systemd em host independente nem autoriza produção. O plano U006 permite homologação local, mantendo host, registry e domínio de produção como lacunas.
+
+## Entregas locais verificadas
+
+- `launch.py` registra API v2, apps, capabilities, headers/CSP, correlação e migrações privadas. `/readyz` negocia protocolo 1 com broker; versão HTTP v2 incompatível recebe 426. O ASGI não abre Docker diretamente. Contratos v1 continuam exercitados.
+- IDE, Containers e IA usam clients HTTP autenticados. O broker revalida sessão e operação tipada; jobs de workload e Git commit usam IDs idempotentes. O proxy de workload usa origem `.apps.local`, ticket POST de uso único, cookie host-only, owner e IP/rede/porta fixados; continua desligado por padrão.
+- `AETHERDESK_KILL_AI`, `AETHERDESK_KILL_DEPLOYS` e `AETHERDESK_SAFE_MODE` foram testados. Modo seguro preserva leitura de workloads, suspende ações pendentes e não reinicia o worker; o kill de deploy reverte jobs pendentes. Egress externo continua fechado.
+- Backup v2 criptografado em AES-256-GCM inclui bancos de identidade, terminais, workloads, cofre, IA e nonces, além de volumes verificados. Fixture restaurou dados e rejeitou chave incorreta. Migração v1→v2 e forward recovery em snapshot v1 passam; rollback ao binário v1 exige restaurar snapshot v1.
+- Regressão Linux/Docker descartável: 137 testes aprovados; depois, smoke v2 adicional de login→desktop→IDE/arquivo→Git commit→deploy→Containers→chat local passou sobre socket broker real. Frontend: 23 componentes aprovados na suíte completa e teste adicional do handoff de rota aprovado; lint, TypeScript e build passaram. E2E Playwright: 124 aprovados, 2 skips intencionais do teste de crash exclusivo do Chromium. A primeira abertura Monaco na matriz ficou entre 1,4 e 1,6 s em fixture.
+- Smoke de jobs SQLite/fake runtime com 20 contas, 100 workloads e oito workers: request idempotente p95 121,549 ms, reconcile p95 67,326 ms, 100 starts únicos em 1,227 s. Os p99 chegaram a 1.092,204 ms e 662,162 ms; a medição exclui latência Docker e não prova orçamento de produção.
+- Candidate local em `.tmp/release-candidate/aetherdesk-candidate.zip`: 116 arquivos, SHA-256 **`2a759f6c8f9fcfaae866f93b36ac57548a72dcb32895bae71395514a8aa62ea3`**. Verificador confirmou hashes e 285 pacotes SPDX, com licença declarada para todos e 14 licenças diretas aceitas. Duas construções consecutivas produziram o mesmo hash; `verify_candidate_install.py` extraiu o ZIP fora da árvore e carregou 66 rotas do ASGI com IDE, workloads, IA e proxy habilitados na fixture.
+- Trivy local: imagem Debian 13 com zero críticos e 86 altos sem versão corrigida no relatório; locks atualizados com zero altos/críticos e cinco baixos em `dompurify`. A política de CI bloqueia crítico de imagem e alto com correção disponível, além de alto/crítico de lock. Relatório de licenças em `license-review-W005.md`.
+- `.github/workflows/candidate.yml` define gates frontend, backend Linux/Docker, scan e release, com upload de relatórios e candidate. `actionlint` oficial 1.7.12 passou localmente; a definição ainda não foi executada no GitHub Actions.
+
+## Pendências que impedem o portão
+
+1. Executar a pipeline hospedada em um commit imutável e guardar logs/artifacts, incluindo comparação do digest/SBOM do runner. O candidate atual é local e o workspace não foi publicado.
+2. Executar upgrade/rollback/restore do candidate em Docker Linux descartável identificado e registrar hashes, contagens e limites. A prova das unidades systemd em host independente permanece lacuna de produção; a decisão acima permite homologação local W005/W006 sem alegar essa prova.
+3. Registrar decisão de risco sobre os 86 achados altos sem correção disponível e revisar atribuição/marks/termos antes de distribuição. Não há achado crítico aberto no scan local, mas ele não substitui scan do artefato hospedado.
+4. Manter proxy público e egress externos desligados na homologação Docker, salvo nova decisão com domínio/registry e política de destinos. `.apps.local` serve somente à fixture local. Custódia de chaves e backup off-host continuam exigências antes de ativação real.
+5. Executar a matriz W006 em ambiente identificado após o aceite de W005, inclusive acessibilidade manual/zoom nativo, carga, restore, segurança e aceite final R001–R028/L001–L032.
+
+O portão permanece fechado; não registrar I013 como aceito nem avançar W006 até as evidências e decisões acima. O runbook integrado está em `docs/L3_Vulcan/operations.md`.

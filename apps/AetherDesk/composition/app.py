@@ -25,8 +25,10 @@ class AppComposition:
         if self.terminal:
             self.terminal.close_all_for_account(account_id)
 
-    def process_account_events(self):
+    def process_account_events(self, guard=None):
         for event in self.identity.pending_account_events():
+            if guard is not None and not guard():
+                return
             if event["event"] == "account.created":
                 self.runtime.ensure(event["account_id"], event["environment_id"])
             elif event["event"] == "account.deleted":
@@ -37,4 +39,5 @@ class AppComposition:
                 self.runtime.stop_session(event["account_id"], event["environment_id"])
                 if self.terminal:
                     self.terminal.close_all_for_account(event["account_id"])
-            self.identity.mark_account_event_consumed(event["id"])
+            if guard is None or guard():
+                self.identity.mark_account_event_consumed(event["id"])

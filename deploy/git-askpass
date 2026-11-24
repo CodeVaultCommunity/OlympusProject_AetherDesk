@@ -1,0 +1,9 @@
+#!/bin/sh
+# Instalado readonly no processo broker; nenhum segredo é gravado neste arquivo.
+case "$1" in
+  *Username*|*username*) printf '%s\n' 'oauth2' ;;
+  *Password*|*password*)
+    test -n "$AETHERDESK_GIT_TOKEN" || exit 1
+    printf '%s\n' "$AETHERDESK_GIT_TOKEN" ;;
+  *) exit 1 ;;
+esac

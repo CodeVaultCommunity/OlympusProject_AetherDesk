@@ -1,76 +1,84 @@
-import os
-import subprocess
-import tempfile
+import threading
 import unittest
 
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from starlette.websockets import WebSocketDisconnect
 
-from apps.AetherDesk.identity import IdentityService
-from apps.AetherDesk.runtime import DockerEnvironmentBroker
-from launch import create_app
+from apps.AetherDesk.identity import ActorContext, IdentityError
+
+from .http import parse_terminal_control, terminal_router
+from .service import TerminalError
 
 
-@unittest.skipUnless(os.environ.get('AETHERDESK_DOCKER_TEST') == '1', 'requer Docker Linux descartável')
-class TerminalHttpTests(unittest.TestCase):
-    def test_socket_revocation_keeps_process_and_reconnects(self):
-        with tempfile.TemporaryDirectory() as temp:
-            keys = ('AETHERDESK_DATA_DIR', 'AETHERDESK_BOOTSTRAP_TOKEN',
-                    'AETHERDESK_CSRF_SECRET', 'AETHERDESK_ALLOW_INSECURE_LOCAL_HTTP')
-            old = {key: os.environ.get(key) for key in keys}
-            os.environ.update({'AETHERDESK_DATA_DIR': temp,
-                'AETHERDESK_BOOTSTRAP_TOKEN': 'bootstrap-secret-long',
-                'AETHERDESK_CSRF_SECRET': 'csrf-secret-long-enough-for-testing-12345',
-                'AETHERDESK_ALLOW_INSECURE_LOCAL_HTTP': '1'})
-            resources = []
-            try:
-                app = create_app()
-                with TestClient(app) as administrator, TestClient(app) as member:
-                    administrator.post('/api/v1/bootstrap', json={'token': 'bootstrap-secret-long',
-                        'username': 'admin', 'password': 'strong-admin-password'})
-                    administrator.post('/api/v1/login', json={'username': 'admin',
-                        'password': 'strong-admin-password'})
-                    csrf = administrator.cookies.get('aether_csrf')
-                    created = administrator.post('/api/v1/admin/accounts', json={'username': 'alice',
-                        'password': 'strong-alice-password', 'role': 'member'},
-                        headers={'X-CSRF-Token': csrf})
-                    self.assertEqual(created.status_code, 200, created.text)
-                    account_id = created.json()['data']['id']
-                    identity = IdentityService(os.path.join(temp, 'identity.sqlite3'), 'bootstrap-secret-long')
-                    admin = identity.actor(administrator.cookies.get('aether_session'))
-                    admin_env = identity.account(admin, admin.account_id)['environment_id']
-                    env_id = identity.account(admin, account_id)['environment_id']
-                    resources.extend((DockerEnvironmentBroker._names(admin_env),
-                                      DockerEnvironmentBroker._names(env_id)))
-                    member.post('/api/v1/login', json={'username': 'alice', 'password': 'strong-alice-password'})
-                    alice_csrf = member.cookies.get('aether_csrf')
-                    terminal = member.post('/api/v1/terminals', json={'columns': 80, 'rows': 24},
-                                           headers={'X-CSRF-Token': alice_csrf})
-                    self.assertEqual(terminal.status_code, 200, terminal.text)
-                    terminal_id = terminal.json()['data']['id']
-                    with member.websocket_connect('/api/v1/ws/terminals/' + terminal_id) as ws:
-                        self.assertTrue(ws.receive_bytes())
-                        session = administrator.get('/api/v1/admin/accounts/' + account_id + '/sessions').json()['data'][0]
-                        revoked = administrator.post('/api/v1/admin/sessions/' + session['id'] + '/revoke',
-                            headers={'X-CSRF-Token': csrf})
-                        self.assertEqual(revoked.status_code, 200)
-                        message = ws.receive()
-                        while message['type'] == 'websocket.send':
-                            message = ws.receive()
-                        self.assertEqual(message['type'], 'websocket.close')
-                    self.assertEqual(member.get('/api/v1/terminals').status_code, 401)
-                    member.post('/api/v1/login', json={'username': 'alice', 'password': 'strong-alice-password'})
-                    self.assertEqual(member.get('/api/v1/terminals').json()['data'][0]['state'], 'open')
-                    with member.websocket_connect('/api/v1/ws/terminals/' + terminal_id) as ws:
-                        self.assertTrue(ws.receive_bytes())
-            finally:
-                for container, volume in resources:
-                    subprocess.run(['docker', 'container', 'rm', '--force', container], capture_output=True)
-                    subprocess.run(['docker', 'volume', 'rm', volume], capture_output=True)
-                for key, value in old.items():
-                    if value is None:
-                        os.environ.pop(key, None)
-                    else:
-                        os.environ[key] = value
+class TerminalControlTests(unittest.TestCase):
+    def test_websocket_requires_same_origin_before_attaching(self):
+        class ServiceStub:
+            def attach(self, *_args):
+                raise AssertionError('terminal attached despite invalid origin')
+
+        app = FastAPI()
+        app.include_router(terminal_router(ServiceStub(), object(), 'fixture-secret' * 3))
+        with TestClient(app) as client:
+            for headers in ({'cookie': 'aether_session=fixture'},
+                            {'origin': 'https://other.example', 'cookie': 'aether_session=fixture'}):
+                with self.subTest(headers=headers), self.assertRaises(WebSocketDisconnect) as caught:
+                    with client.websocket_connect('/api/v1/ws/terminals/fixture', headers=headers):
+                        pass
+                self.assertEqual(caught.exception.code, 4403)
+
+    def test_accepts_only_typed_bounded_control_messages(self):
+        self.assertEqual(parse_terminal_control('{"type":"resize","columns":80,"rows":24}'),
+                         {'type': 'resize', 'columns': 80, 'rows': 24})
+        self.assertEqual(parse_terminal_control('{"type":"signal","name":"INT"}')['name'], 'INT')
+        self.assertEqual(parse_terminal_control('{"type":"close"}')['type'], 'close')
+        for raw in ('{', '[]', '{"type":"resize","columns":true,"rows":24}',
+                    '{"type":"resize","columns":999,"rows":24}',
+                    '{"type":"signal","name":"KILL"}',
+                    '{"type":"close","command":"docker ps"}', 'x' * 4097):
+            with self.subTest(raw=raw[:60]), self.assertRaisesRegex(TerminalError,
+                                                                     'INVALID_CONTROL_MESSAGE'):
+                parse_terminal_control(raw)
+
+    def test_open_websocket_closes_after_capability_revocation(self):
+        waiting = threading.Event()
+        release = threading.Event()
+
+        class IdentityStub:
+            revoked = False
+
+            def actor(self, _token):
+                return ActorContext('account', 'session', 'member', 1)
+
+            def require(self, _actor, _capability):
+                if self.revoked:
+                    raise IdentityError('FORBIDDEN')
+
+        class ConnectionStub:
+            def read(self):
+                waiting.set()
+                release.wait(5)
+                return b''
+
+            def close(self):
+                release.set()
+
+        class ServiceStub:
+            def attach(self, _actor, _terminal_id):
+                return ConnectionStub()
+
+        identity = IdentityStub()
+        app = FastAPI()
+        app.include_router(terminal_router(ServiceStub(), identity, 'fixture-secret' * 3))
+        try:
+            with TestClient(app) as client:
+                with client.websocket_connect('/api/v1/ws/terminals/fixture',
+                    headers={'origin': 'http://testserver', 'cookie': 'aether_session=fixture'}) as ws:
+                    self.assertTrue(waiting.wait(5))
+                    identity.revoked = True
+                    self.assertEqual(ws.receive(), {'type': 'websocket.close', 'code': 4403, 'reason': ''})
+        finally:
+            release.set()
 
 
 if __name__ == '__main__':

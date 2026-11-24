@@ -1,6 +1,7 @@
 """Operação offline de backup e restauração: python -m apps.AetherDesk.backup.cli."""
 
 import argparse
+import base64
 import os
 from pathlib import Path
 
@@ -25,8 +26,13 @@ def main():
     restore.add_argument('--data-dir', type=Path, required=True)
     restore.add_argument('--confirm-offline', action='store_true')
     args = parser.parse_args()
+    encoded = os.environ.get('AETHERDESK_BACKUP_KEY_B64', '')
+    try:
+        key = base64.b64decode(encoded, validate=True) if encoded else None
+    except ValueError as exc:
+        parser.error('AETHERDESK_BACKUP_KEY_B64 inválida')
     if args.command == 'verify':
-        manifest = verify_snapshot(args.snapshot)
+        manifest = verify_snapshot(args.snapshot, key)
         print(f"Snapshot verificado: {len(manifest['volumes'])} volumes")
         return
     image = os.environ.get('AETHERDESK_RUNTIME_IMAGE', 'aetherdesk-files:w003')
@@ -34,7 +40,7 @@ def main():
     if args.command == 'restore':
         if not args.confirm_offline:
             parser.error('Pare o serviço e use --confirm-offline para restaurar')
-        manifest = restore_snapshot(args.snapshot, args.data_dir, runtime)
+        manifest = restore_snapshot(args.snapshot, args.data_dir, runtime, key)
         print(f"Restauração concluída: {len(manifest['volumes'])} volumes")
         return
     secret = os.environ.get('AETHERDESK_BOOTSTRAP_TOKEN', '')
@@ -42,7 +48,8 @@ def main():
     identity = IdentityService(data_dir / 'identity.sqlite3', secret)
     admin = AdministrationService(data_dir / 'identity.sqlite3', identity,
                                   AppComposition(identity, runtime))
-    backup = BackupService(data_dir, admin, runtime)
+    backup = BackupService(data_dir, admin, runtime, encryption_key=key,
+                           require_encryption=bool(os.environ.get('AETHERDESK_FEATURES', '').strip()))
     result = backup.run_once(args.destination, args.retention, args.days)
     print(f'Snapshot criado: {result}')
 

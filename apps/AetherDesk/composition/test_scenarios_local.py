@@ -3,6 +3,7 @@
 import os
 import subprocess
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -11,6 +12,7 @@ from fastapi.testclient import TestClient
 from apps.AetherDesk.composition.app import AppComposition
 from apps.AetherDesk.identity import IdentityService
 from apps.AetherDesk.runtime import DockerEnvironmentBroker
+from apps.AetherDesk.runtime.test_fixture import BrokerFixture
 from apps.AetherDesk.terminal.service import TerminalService, TerminalError
 from launch import create_app
 
@@ -27,7 +29,10 @@ class LocalScenarios(unittest.TestCase):
                 'AETHERDESK_CSRF_SECRET': 'csrf-secret-long-enough-for-testing-12345',
                 'AETHERDESK_ALLOW_INSECURE_LOCAL_HTTP': '1'})
             resources = []
+            broker = BrokerFixture(temp)
+            terminals = None
             try:
+                broker.start()
                 app = create_app()
                 with TestClient(app) as administrator, TestClient(app) as alice_client, TestClient(app) as bob_client, TestClient(app) as alice_second:
                     administrator.post('/api/v1/bootstrap', json={'token': 'bootstrap-secret-long',
@@ -59,6 +64,9 @@ class LocalScenarios(unittest.TestCase):
                     alice = identity.actor(alice_client.cookies.get('aether_session'))
                     bob = identity.actor(bob_client.cookies.get('aether_session'))
                     # S01: conta nova provisionada pelo evento após a mutação HTTP.
+                    deadline = time.monotonic() + 15
+                    while runtime.state(alice_id, alice_env).state != 'running' and time.monotonic() < deadline:
+                        time.sleep(0.25)
                     self.assertEqual(runtime.state(alice_id, alice_env).state, 'running')
                     # S02/S03: mesma URL, raízes e conteúdo independentes.
                     for client, content in ((alice_client, b'alice'), (bob_client, b'bobby')):
@@ -119,7 +127,8 @@ class LocalScenarios(unittest.TestCase):
                     self.assertEqual(alice_client.get('/api/v1/metrics/server').status_code, 403)
                     # S13: revogar capacidade fecha WS aberto.
                     active_terminal = terminals.create(alice)
-                    with alice_client.websocket_connect('/api/v1/ws/terminals/' + active_terminal) as ws:
+                    with alice_client.websocket_connect('/api/v1/ws/terminals/' + active_terminal,
+                        headers={'origin': 'http://testserver'}) as ws:
                         self.assertTrue(ws.receive_bytes())
                         identity.set_permission(admin, alice_id, 'terminal.control', False)
                         message = ws.receive()
@@ -134,6 +143,9 @@ class LocalScenarios(unittest.TestCase):
                     self.assertNotEqual(result.returncode, 0)
                     self.assertEqual(runtime.exec(bob_id, bob_env, ['cat', '/persist/same.txt']), 'bobby')
             finally:
+                if terminals is not None:
+                    terminals.shutdown()
+                broker.stop()
                 for container, volume in resources:
                     subprocess.run(['docker', 'container', 'rm', '--force', container], capture_output=True)
                     subprocess.run(['docker', 'volume', 'rm', volume], capture_output=True)

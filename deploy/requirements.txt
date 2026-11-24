@@ -7,28 +7,43 @@ annotated-types==0.8.0
 anyio==4.16.0
     # via
     #   fastapi
+    #   httpx
     #   starlette
 argon2-cffi==25.1.0
     # via aetherdesk
 argon2-cffi-bindings==26.2.0
     # via argon2-cffi
 certifi==2026.11.20
-    # via requests
+    # via
+    #   httpcore
+    #   httpx
+    #   requests
 cffi==2.1.1
-    # via argon2-cffi-bindings
+    # via
+    #   argon2-cffi-bindings
+    #   cryptography
 charset-normalizer==3.5.2
     # via requests
 click==8.5.1
     # via uvicorn
+cryptography==50.0.2
+    # via aetherdesk
 docker==7.2.0
     # via aetherdesk
 fastapi==0.165.0
     # via aetherdesk
 h11==0.16.0
-    # via uvicorn
+    # via
+    #   httpcore
+    #   uvicorn
+httpcore==1.0.9
+    # via httpx
+httpx==0.28.1
+    # via aetherdesk
 idna==3.20
     # via
     #   anyio
+    #   httpx
     #   requests
 opentelemetry-api==1.45.2
     # via fastapi

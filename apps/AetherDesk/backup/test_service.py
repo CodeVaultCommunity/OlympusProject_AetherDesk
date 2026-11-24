@@ -1,16 +1,22 @@
 import os
 import subprocess
 import tempfile
+import sqlite3
 import unittest
 import time
 from pathlib import Path
 
 from apps.AetherDesk.administration.service import AdministrationService
-from apps.AetherDesk.backup.service import BackupService, verify_snapshot, restore_snapshot
+from apps.AetherDesk.backup.service import BackupService, BackupError, verify_snapshot, restore_snapshot
+from apps.AetherDesk.backup.sealed import SealedBackupError
 from apps.AetherDesk.composition.app import AppComposition
 from apps.AetherDesk.files.gateway import ContainerFileGateway
 from apps.AetherDesk.identity import IdentityError, IdentityService
 from apps.AetherDesk.runtime import DockerEnvironmentBroker
+from apps.AetherDesk.workloads import WorkloadService
+from apps.AetherDesk.workloads.service import ApprovedTemplate
+from apps.AetherDesk.workloads.docker_runtime import DockerWorkloadRuntime
+from apps.AetherDesk.workloads.test_service import FakeRuntime
 
 
 @unittest.skipUnless(os.environ.get('AETHERDESK_DOCKER_TEST') == '1', 'requer Docker Linux descartável')
@@ -44,7 +50,7 @@ class BackupTests(unittest.TestCase):
                 gateway.write(bob, '/persist/remember.txt', b'bobby-data')
                 backup = BackupService(data_dir, administration, runtime)
                 first = backup.run_once(backup_dir, 'days', 7)
-                self.assertEqual(verify_snapshot(first)['format'], 1)
+                self.assertEqual(verify_snapshot(first)['format'], 2)
                 old_snapshot = backup_dir / 'aetherdesk-old-fixture'
                 old_snapshot.mkdir()
                 old_time = time.time() - 10 * 24 * 3600
@@ -77,6 +83,74 @@ class BackupTests(unittest.TestCase):
                 for container, volume in account_resources:
                     subprocess.run(['docker', 'container', 'rm', '--force', container], capture_output=True)
                     subprocess.run(['docker', 'volume', 'rm', volume], capture_output=True)
+
+    def test_v2_snapshot_restores_workload_ai_and_nonce_state(self):
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            data_dir, backup_dir, restored = base / 'data', base / 'backup', base / 'restored'
+            data_dir.mkdir()
+            identity = IdentityService(data_dir / 'identity.sqlite3', 'bootstrap-secret-long',
+                                       enabled_features=frozenset({'workloads'}))
+            identity.bootstrap('bootstrap-secret-long', 'admin', 'strong-admin-password')
+            _, actor = identity.login('admin', 'strong-admin-password')
+            runtime = DockerEnvironmentBroker('aetherdesk-files:w003')
+            environment = identity.account(actor, actor.account_id)['environment_id']
+            container, personal_volume = runtime._names(environment)
+            administration = AdministrationService(data_dir / 'identity.sqlite3', identity,
+                                                   AppComposition(identity, runtime))
+            service = WorkloadService(data_dir / 'workloads.sqlite3', FakeRuntime(), {
+                'stable': ApprovedTemplate('stable', 'example/app@sha256:' + 'a' * 64,
+                                           'b' * 64, 'c' * 64, True)},
+                identity.require, lambda _actor: True)
+            project = service.project(actor, 'Portal')
+            workload_id = service.create(actor, project, 'api')
+            workload_volume = DockerWorkloadRuntime._names(workload_id)[1]
+            for name in ('ai.sqlite3', 'workload-secrets.sqlite3', 'broker-nonces.sqlite3'):
+                with sqlite3.connect(data_dir / name) as db:
+                    db.execute('CREATE TABLE fixture(value TEXT)')
+                    db.execute('INSERT INTO fixture VALUES(?)', (name,))
+            try:
+                runtime.ensure(actor.account_id, environment)
+                subprocess.run(['docker', 'volume', 'create', '--label',
+                    f'aetherdesk.owner_id={actor.account_id}', '--label',
+                    f'aetherdesk.workload_id={workload_id}', workload_volume],
+                    check=True, capture_output=True)
+                subprocess.run(['docker', 'run', '--rm', '--network', 'none',
+                    '--user', '0:0',
+                    '--mount', f'type=volume,source={workload_volume},target=/data',
+                    runtime.image, 'sh', '-c', 'printf fixture > /data/marker.txt'],
+                    check=True, capture_output=True)
+                key = b'k' * 32
+                snapshot = BackupService(data_dir, administration, runtime,
+                    encryption_key=key, require_encryption=True).run_once(backup_dir)
+                self.assertEqual(snapshot.suffix, '.adbackup')
+                with self.assertRaises(BackupError):
+                    verify_snapshot(snapshot)
+                with self.assertRaises(SealedBackupError):
+                    verify_snapshot(snapshot, b'z' * 32)
+                manifest = verify_snapshot(snapshot, key)
+                self.assertEqual(manifest['format'], 2)
+                self.assertEqual(len(manifest['volumes']), 2)
+                self.assertIn('ai.sqlite3', manifest['files'])
+                self.assertIn('workloads.sqlite3', manifest['files'])
+                subprocess.run(['docker', 'container', 'rm', '--force', container], capture_output=True)
+                subprocess.run(['docker', 'volume', 'rm', personal_volume], check=True, capture_output=True)
+                subprocess.run(['docker', 'volume', 'rm', workload_volume], check=True, capture_output=True)
+                restore_snapshot(snapshot, restored, runtime, key)
+                with sqlite3.connect(restored / 'workloads.sqlite3') as db:
+                    self.assertEqual(db.execute('SELECT owner_id FROM workloads WHERE id=?',
+                        (workload_id,)).fetchone()[0], actor.account_id)
+                for name in ('ai.sqlite3', 'workload-secrets.sqlite3', 'broker-nonces.sqlite3'):
+                    with sqlite3.connect(restored / name) as db:
+                        self.assertEqual(db.execute('SELECT value FROM fixture').fetchone()[0], name)
+                content = subprocess.run(['docker', 'run', '--rm', '--network', 'none',
+                    '--mount', f'type=volume,source={workload_volume},target=/data,readonly',
+                    runtime.image, 'cat', '/data/marker.txt'], check=True, capture_output=True)
+                self.assertEqual(content.stdout, b'fixture')
+            finally:
+                subprocess.run(['docker', 'container', 'rm', '--force', container], capture_output=True)
+                subprocess.run(['docker', 'volume', 'rm', personal_volume], capture_output=True)
+                subprocess.run(['docker', 'volume', 'rm', workload_volume], capture_output=True)
 
 
 if __name__ == '__main__':

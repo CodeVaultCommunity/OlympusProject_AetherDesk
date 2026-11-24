@@ -1,0 +1,156 @@
+name: AetherDesk candidate
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    runs-on: ubuntu-24.04
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/web/.playwright-browsers
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+        working-directory: web
+      - run: pnpm lint
+        working-directory: web
+      - run: pnpm test
+        working-directory: web
+      - run: pnpm build
+        working-directory: web
+      - run: pnpm exec playwright install --with-deps chromium firefox webkit
+        working-directory: web
+      - run: pnpm test:e2e
+        working-directory: web
+
+  backend:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build disposable runtime chain
+        run: |
+          docker build -f apps/AetherDesk/runtime/Dockerfile -t aetherdesk-runtime:w002 .
+          docker build -f apps/AetherDesk/terminal/Dockerfile -t aetherdesk-terminal:w003 .
+          docker build -f apps/AetherDesk/files/Dockerfile -t aetherdesk-files:w003 .
+          docker build -f deploy/Dockerfile.broker-fixture -t aetherdesk-broker-fixture:ci deploy
+      - name: Unit, contract, migration, restore and Docker integration
+        run: |
+          docker run --rm --network none --read-only --cap-drop ALL \
+            --tmpfs /tmp:rw,nosuid,nodev,size=256m \
+            --mount "type=bind,source=$PWD,target=/src,readonly" \
+            --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
+            --env PYTHONPATH=/src --env PYTHONDONTWRITEBYTECODE=1 \
+            --env AETHERDESK_DOCKER_TEST=1 --workdir /src \
+            aetherdesk-broker-fixture:ci python -B -m unittest discover -v
+
+  security:
+    needs: [frontend, backend]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image under scan
+        run: |
+          docker build -f apps/AetherDesk/runtime/Dockerfile -t aetherdesk-runtime:w002 .
+          docker build -f apps/AetherDesk/terminal/Dockerfile -t aetherdesk-terminal:w003 .
+          docker build -f apps/AetherDesk/files/Dockerfile -t aetherdesk-files:ci .
+      - name: Prepare locked dependency scan
+        run: |
+          mkdir scan-input
+          cp uv.lock scan-input/uv.lock
+          cp web/pnpm-lock.yaml scan-input/pnpm-lock.yaml
+      - name: Scan locked dependencies
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          version: v0.76.2
+          scan-type: fs
+          scan-ref: scan-input
+          format: json
+          output: trivy-locks.json
+          exit-code: '1'
+          severity: CRITICAL,HIGH
+      - name: Block all critical image findings
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          version: v0.76.2
+          scan-type: image
+          image-ref: aetherdesk-files:ci
+          format: json
+          output: trivy-critical.json
+          exit-code: '1'
+          severity: CRITICAL
+          vuln-type: os,library
+          ignore-unfixed: false
+      - name: Block high image findings with available fix
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          version: v0.76.2
+          scan-type: image
+          image-ref: aetherdesk-files:ci
+          format: json
+          output: trivy-fixed-high.json
+          exit-code: '1'
+          severity: HIGH
+          vuln-type: os,library
+          ignore-unfixed: true
+      - name: Record all high residual findings
+        if: always()
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          version: v0.76.2
+          scan-type: image
+          image-ref: aetherdesk-files:ci
+          format: json
+          output: trivy-residual.json
+          exit-code: '0'
+          severity: HIGH
+          vuln-type: os,library
+          ignore-unfixed: false
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: aetherdesk-security-${{ github.sha }}
+          path: trivy-*.json
+          retention-days: 30
+
+  release:
+    needs: [frontend, backend, security]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pnpm install --frozen-lockfile
+        working-directory: web
+      - run: pnpm build
+        working-directory: web
+      - run: python -m pip install -r deploy/requirements.txt
+      - run: python scripts/build_release.py --output release-candidate
+      - run: python scripts/verify_release.py --directory release-candidate
+      - run: python scripts/verify_candidate_install.py --archive release-candidate/aetherdesk-candidate.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aetherdesk-candidate-${{ github.sha }}
+          path: release-candidate/
+          retention-days: 30

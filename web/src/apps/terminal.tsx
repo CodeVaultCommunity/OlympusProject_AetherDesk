@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 import './terminal.css';
+import { ApiError } from '../clients';
 
 export interface TerminalClient {
   list(): Promise<{ id: string; state: string }[]>;
@@ -11,7 +12,11 @@ export interface TerminalClient {
   connect(id: string): WebSocket;
 }
 
-export function TerminalApp({ client }: { client: TerminalClient }) {
+const terminalPalette = (theme: 'dark' | 'light') => theme === 'light'
+  ? { background: '#ffffff', foreground: '#243251', cursor: '#3359a2' }
+  : { background: '#0b1020', foreground: '#e5e9f2', cursor: '#aac1ff' };
+
+export function TerminalApp({ client, theme = 'dark' }: { client: TerminalClient; theme?: 'dark' | 'light' }) {
   const [sessions, setSessions] = useState<{ id: string; state: string }[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [status, setStatus] = useState('Carregando terminais…');
@@ -19,23 +24,40 @@ export function TerminalApp({ client }: { client: TerminalClient }) {
   const xterm = useRef<Terminal | null>(null);
   const socket = useRef<WebSocket | null>(null);
   const fit = useRef<FitAddon | null>(null);
+  const initialPalette = useRef(terminalPalette(theme));
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     try {
       const entries = (await client.list()).filter(entry => entry.state === 'open');
       setSessions(entries);
       setSelected(old => old && entries.some(entry => entry.id === old) ? old : entries[0]?.id || null);
       setStatus('Terminais atualizados');
     } catch { setStatus('Falha ao listar terminais'); }
-  }
-  useEffect(() => { void refresh(); }, [client]);
+  }, [client]);
+  useEffect(() => {
+    let active = true;
+    void client.list().then(entries => {
+      if (!active) return;
+      const open = entries.filter(entry => entry.state === 'open');
+      setSessions(open);
+      setSelected(old => old && open.some(entry => entry.id === old) ? old : open[0]?.id || null);
+      setStatus('Terminais atualizados');
+    }).catch(() => { if (active) setStatus('Falha ao listar terminais'); });
+    return () => { active = false; };
+  }, [client]);
 
   async function create() {
     try {
       const id = await client.create(fit.current?.proposeDimensions()?.cols || 80,
         fit.current?.proposeDimensions()?.rows || 24);
       await refresh(); setSelected(id);
-    } catch { setStatus('Falha ao criar terminal'); }
+    } catch (error) {
+      setStatus(error instanceof ApiError && error.code === 'TERMINAL_QUOTA'
+        ? 'Limite de terminais atingido. Encerre um para criar outro.'
+        : error instanceof ApiError && error.code === 'TERMINAL_RECOVERING'
+          ? 'Criação anterior em recuperação. Tente novamente em um minuto.'
+          : 'Falha ao criar terminal');
+    }
   }
   async function close() {
     if (!selected || !window.confirm('Encerrar este terminal e seus processos?')) return;
@@ -45,7 +67,8 @@ export function TerminalApp({ client }: { client: TerminalClient }) {
 
   useEffect(() => {
     if (!selected || !mount.current) return;
-    const term = new Terminal({ cursorBlink: true, convertEol: true, fontFamily: 'Cascadia Code, Consolas, monospace', fontSize: 13 });
+    const term = new Terminal({ cursorBlink: true, convertEol: true, fontFamily: 'Cascadia Code, Consolas, monospace', fontSize: 13,
+      theme: initialPalette.current });
     const addon = new FitAddon(); term.loadAddon(addon); term.open(mount.current); addon.fit(); term.focus();
     xterm.current = term; fit.current = addon;
     const ws = client.connect(selected); socket.current = ws;
@@ -64,6 +87,7 @@ export function TerminalApp({ client }: { client: TerminalClient }) {
     observer.observe(mount.current);
     return () => { observer.disconnect(); input.dispose(); ws.close(); term.dispose(); xterm.current = null; socket.current = null; fit.current = null; };
   }, [client, selected]);
+  useEffect(() => { if (xterm.current) xterm.current.options.theme = terminalPalette(theme); }, [theme]);
 
   return <div className="terminal-app">
     <div className="terminal-toolbar"><button onClick={() => void create()}>Novo Bash</button><button onClick={() => void refresh()}>Atualizar</button><button onClick={() => void close()} disabled={!selected}>Encerrar</button><span>{status}</span></div>

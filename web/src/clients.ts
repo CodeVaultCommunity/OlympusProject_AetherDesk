@@ -2,19 +2,44 @@ import type { FileClient } from './apps/files';
 import type { TerminalClient } from './apps/terminal';
 import type { MonitorClient } from './apps/monitor';
 import type { Account, AdministrationClient, BackupPolicy } from './apps/administration';
+import type { DesktopState } from './window-state';
 
 function csrf() { return document.cookie.split('; ').find(part => part.startsWith('aether_csrf='))?.split('=')[1] || ''; }
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+export class ApiError extends Error {
+  constructor(public status: number, public code: string) { super(code); }
+}
+export async function requestEnvelope<T>(path: string, init: RequestInit = {}): Promise<{ data: T; revision?: number }> {
   const response = await fetch(`/api/v1${path}`, { credentials: 'include', ...init,
     headers: { 'X-CSRF-Token': csrf(), ...init.headers } });
   if (!response.ok) {
     const error = await response.json().catch(() => null);
-    throw new Error(error?.detail || `HTTP_${response.status}`);
+    throw new ApiError(response.status, error?.error?.code || error?.detail || `HTTP_${response.status}`);
   }
-  return (await response.json()).data as T;
+  return await response.json() as { data: T; revision?: number };
+}
+export async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  return (await requestEnvelope<T>(path, init)).data;
+}
+export async function requestV2<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const response = await fetch(`/api/v2${path}`, { credentials: 'include', ...init,
+    headers: { 'X-CSRF-Token': csrf(), 'X-AetherDesk-API-Version': '2', ...init.headers } });
+  const version = response.headers.get('X-AetherDesk-API-Version');
+  if (version && version !== '2') throw new ApiError(426, 'API_VERSION_UNSUPPORTED');
+  if (!response.ok) {
+    const error = await response.json().catch(() => null);
+    throw new ApiError(response.status, error?.error?.code || error?.detail || `HTTP_${response.status}`);
+  }
+  return (await response.json() as { data: T }).data;
 }
 function json(method: string, body?: unknown): RequestInit { return { method, headers: { 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) }; }
 const query = (value: string) => encodeURIComponent(value);
+
+export const desktopClient = {
+  load: () => requestEnvelope<DesktopState>('/desktop/state'),
+  save: (state: DesktopState, revision: number) => requestEnvelope<DesktopState>('/desktop/state', {
+    ...json('PUT', state), headers: { 'Content-Type': 'application/json', 'If-Match': `"${revision}"` },
+  }),
+};
 
 export const filesClient: FileClient = {
   list: path => request(`/files/list?path=${query(path)}`),

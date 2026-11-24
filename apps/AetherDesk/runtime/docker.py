@@ -128,9 +128,16 @@ class DockerEnvironmentBroker:
 
     def exec(self, account_id: str, environment_id: str,
              command: Sequence[str]) -> str:
+        result = self.exec_status(account_id, environment_id, command)
+        if result.returncode:
+            raise RuntimeError("RUNTIME_UNAVAILABLE", result.stderr.strip()[:400])
+        return result.stdout.strip()
+
+    def exec_status(self, account_id: str, environment_id: str,
+                    command: Sequence[str]):
         env = self.state(account_id, environment_id)
         if env.state != "running":
             raise RuntimeError("ENVIRONMENT_STOPPED")
         if not command or any("\x00" in part for part in command):
             raise RuntimeError("INVALID_COMMAND")
-        return self._docker("exec", "--user", "10001:10001", env.container_name, *command)
+        return self._run(("exec", "--user", "10001:10001", env.container_name, *command))

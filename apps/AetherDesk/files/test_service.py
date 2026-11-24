@@ -50,6 +50,17 @@ class LinuxFileTests(unittest.TestCase):
         self.files.delete("/outside")
         self.assertFalse((Path(self.temp.name) / "outside").exists())
 
+    def test_listing_limit_bounds_agent_output(self):
+        root = Path(self.temp.name)
+        for name in ('one', 'two', 'three'):
+            (root / name).touch()
+        with LinuxFileService(root, max_list_entries=3) as files:
+            self.assertEqual(len(files.list('/')), 3)
+        with LinuxFileService(root, max_list_entries=2) as files:
+            with self.assertRaises(FileError) as raised:
+                files.list('/')
+            self.assertEqual(raised.exception.code, 'TOO_LARGE')
+
 
 if __name__ == "__main__":
     unittest.main()

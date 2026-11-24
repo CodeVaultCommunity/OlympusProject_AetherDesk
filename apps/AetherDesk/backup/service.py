@@ -14,14 +14,20 @@ import shutil
 import sqlite3
 import subprocess
 import threading
+import tempfile
 import uuid
 from contextlib import closing, contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Callable
 
 from apps.AetherDesk.administration.service import AdministrationService
 from apps.AetherDesk.identity import ActorContext
 from apps.AetherDesk.runtime import DockerEnvironmentBroker
+from apps.AetherDesk.workloads.docker_runtime import DockerWorkloadRuntime
+from apps.AetherDesk.support.leases import LeaseStore
+from apps.AetherDesk.support.migrations import apply_migration
+from .sealed import seal_snapshot, unseal_snapshot
 
 
 class BackupError(Exception):
@@ -43,14 +49,19 @@ def _inside(path: Path, root: Path) -> bool:
 
 class BackupService:
     def __init__(self, data_dir: str | Path, administration: AdministrationService,
-                 runtime: DockerEnvironmentBroker):
+                 runtime: DockerEnvironmentBroker, encryption_key: bytes | None = None,
+                 require_encryption: bool = False):
+        if encryption_key is not None and (type(encryption_key) is not bytes or len(encryption_key) != 32):
+            raise BackupError('INVALID_BACKUP_KEY')
         self.data_dir = Path(data_dir)
         self.administration, self.runtime = administration, runtime
+        self.encryption_key, self.require_encryption = encryption_key, require_encryption
         self._lock = threading.Lock()
-        with self._db() as db:
-            db.execute('''CREATE TABLE IF NOT EXISTS backup_runs (
+        apply_migration(self.administration.db_path, 'backup.runs.v1', lambda db: db.execute('''
+            CREATE TABLE IF NOT EXISTS backup_runs (
                 id TEXT PRIMARY KEY, started_at TEXT NOT NULL, finished_at TEXT,
-                status TEXT NOT NULL, snapshot TEXT)''')
+                status TEXT NOT NULL, snapshot TEXT)'''))
+        self.leases = LeaseStore(self.administration.db_path)
 
     @contextmanager
     def _db(self):
@@ -67,8 +78,28 @@ class BackupService:
     def _volumes(self):
         with closing(sqlite3.connect(self.administration.identity.db_path)) as db:
             rows = db.execute('SELECT id,environment_id FROM accounts').fetchall()
-        return [{'account_id': account_id, 'environment_id': environment_id,
-                 'volume': self.runtime._names(environment_id)[1]} for account_id, environment_id in rows]
+        volumes = [{'kind': 'account', 'account_id': account_id,
+                    'environment_id': environment_id,
+                    'volume': self.runtime._names(environment_id)[1]}
+                   for account_id, environment_id in rows]
+        workload_db = self.data_dir / 'workloads.sqlite3'
+        if workload_db.exists():
+            with closing(sqlite3.connect(workload_db)) as db:
+                workloads = db.execute('SELECT id,owner_id,observed FROM workloads').fetchall()
+            for workload_id, owner_id, observed in workloads:
+                volume = DockerWorkloadRuntime._names(workload_id)[1]
+                inspected = subprocess.run(['docker', 'volume', 'inspect', '--format',
+                    '{{index .Labels "aetherdesk.owner_id"}}|{{index .Labels "aetherdesk.workload_id"}}',
+                    volume], capture_output=True, text=True, timeout=30)
+                if inspected.returncode:
+                    if ('No such volume' in inspected.stderr and observed in ('absent', 'removed')):
+                        continue  # Aplicação criada, mas ainda sem volume.
+                    raise BackupError('WORKLOAD_VOLUME_UNAVAILABLE')
+                if inspected.stdout.strip() != f'{owner_id}|{workload_id}':
+                    raise BackupError('WORKLOAD_VOLUME_OWNERSHIP_MISMATCH')
+                volumes.append({'kind': 'workload', 'account_id': owner_id,
+                                'workload_id': workload_id, 'volume': volume})
+        return volumes
 
     def run_due(self, actor: ActorContext | None = None):
         if actor:
@@ -80,14 +111,42 @@ class BackupService:
             policy = dict(zip(('enabled', 'frequency_hours', 'destination', 'retention_mode', 'retention_days'), row))
         if not policy['enabled']:
             return None
-        with self._db() as db:
-            row = db.execute("SELECT finished_at FROM backup_runs WHERE status='ok' ORDER BY finished_at DESC LIMIT 1").fetchone()
-        now = datetime.now(timezone.utc)
-        if row and now - datetime.fromisoformat(row[0]) < timedelta(hours=policy['frequency_hours']):
+        lease = self.leases.acquire('backup.schedule', ttl_seconds=45)
+        if lease is None:
             return None
-        return self.run_once(Path(policy['destination']), policy['retention_mode'], policy['retention_days'])
+        stopped = threading.Event()
+        lost = threading.Event()
 
-    def run_once(self, destination: Path, retention_mode: str = 'replace', retention_days: int | None = None):
+        def heartbeat():
+            current = lease
+            while not stopped.wait(10):
+                renewed = self.leases.renew(current, ttl_seconds=45)
+                if renewed is None:
+                    lost.set()
+                    return
+                current = renewed
+
+        worker = threading.Thread(target=heartbeat, name='aetherdesk-backup-lease', daemon=True)
+        worker.start()
+        try:
+            with self._db() as db:
+                row = db.execute("SELECT finished_at FROM backup_runs WHERE status='ok' ORDER BY finished_at DESC LIMIT 1").fetchone()
+            now = datetime.now(timezone.utc)
+            if row and now - datetime.fromisoformat(row[0]) < timedelta(hours=policy['frequency_hours']):
+                return None
+            return self.run_once(Path(policy['destination']), policy['retention_mode'],
+                                 policy['retention_days'],
+                                 lease_guard=lambda: not lost.is_set() and self.leases.valid(lease))
+        finally:
+            stopped.set()
+            worker.join(timeout=5)
+            self.leases.release(lease)
+
+    def run_once(self, destination: Path, retention_mode: str = 'replace',
+                 retention_days: int | None = None,
+                 lease_guard: Callable[[], bool] | None = None):
+        if self.require_encryption and self.encryption_key is None:
+            raise BackupError('BACKUP_KEY_REQUIRED')
         if retention_mode not in ('replace', 'days'):
             raise BackupError('INVALID_RETENTION')
         if not self._lock.acquire(blocking=False):
@@ -106,9 +165,10 @@ class BackupService:
             with self._db() as db:
                 db.execute('INSERT INTO backup_runs VALUES(?,?,?,?,NULL)',
                            (run_id, timestamp.isoformat(), None, 'running'))
-            manifest = {'format': 1, 'created_at': timestamp.isoformat(),
+            manifest = {'format': 2, 'created_at': timestamp.isoformat(),
                         'files': {}, 'volumes': self._volumes()}
-            for name in ('identity.sqlite3', 'terminals.sqlite3'):
+            for name in ('identity.sqlite3', 'terminals.sqlite3', 'workloads.sqlite3',
+                         'workload-secrets.sqlite3', 'ai.sqlite3', 'broker-nonces.sqlite3'):
                 source = self.data_dir / name
                 if not source.exists():
                     continue
@@ -127,8 +187,15 @@ class BackupService:
                     raise BackupError('VOLUME_COPY_FAILED')
                 manifest['files'][target.name] = _hash(target)
             (pending / 'manifest.json').write_text(json.dumps(manifest, indent=2), encoding='utf-8')
+            if lease_guard is not None and not lease_guard():
+                raise BackupError('LEASE_LOST')
             final = destination / ('aetherdesk-' + timestamp.strftime('%Y%m%dT%H%M%SZ') + '-' + run_id[:8])
-            pending.rename(final)
+            if self.encryption_key is not None:
+                final = final.with_suffix('.adbackup')
+                seal_snapshot(pending, final, self.encryption_key)
+                shutil.rmtree(pending)
+            else:
+                pending.rename(final)
             with self._db() as db:
                 db.execute("UPDATE backup_runs SET finished_at=?,status='ok',snapshot=? WHERE id=?",
                            (datetime.now(timezone.utc).isoformat(), str(final), run_id))
@@ -149,18 +216,27 @@ class BackupService:
     @staticmethod
     def prune(destination: Path, mode: str, days: int | None, current: Path):
         snapshots = [item for item in destination.iterdir()
-                     if item.is_dir() and item.name.startswith('aetherdesk-') and _inside(item, destination)]
+                     if (item.is_dir() or item.is_file() and item.suffix == '.adbackup')
+                     and item.name.startswith('aetherdesk-') and _inside(item, destination)]
         threshold = datetime.now(timezone.utc) - timedelta(days=days or 1)
         for item in snapshots:
             if item == current:
                 continue
             if mode == 'replace' or (mode == 'days' and datetime.fromtimestamp(item.stat().st_mtime, timezone.utc) < threshold):
-                shutil.rmtree(item)
+                if item.is_dir():
+                    shutil.rmtree(item)
+                else:
+                    item.unlink()
 
 
-def verify_snapshot(snapshot: Path) -> dict:
+def verify_snapshot(snapshot: Path, encryption_key: bytes | None = None) -> dict:
+    if snapshot.is_file():
+        if encryption_key is None:
+            raise BackupError('BACKUP_KEY_REQUIRED')
+        with tempfile.TemporaryDirectory(prefix='aetherdesk-verify-') as temp:
+            return unseal_snapshot(snapshot, Path(temp) / 'snapshot', encryption_key)
     manifest = json.loads((snapshot / 'manifest.json').read_text(encoding='utf-8'))
-    if manifest.get('format') != 1:
+    if manifest.get('format') not in (1, 2):
         raise BackupError('INVALID_FORMAT')
     for name, digest in manifest['files'].items():
         if '/' in name or '\\' in name or name.startswith('.'):
@@ -170,20 +246,42 @@ def verify_snapshot(snapshot: Path) -> dict:
     return manifest
 
 
-def restore_snapshot(snapshot: Path, data_dir: Path, runtime: DockerEnvironmentBroker):
+def restore_snapshot(snapshot: Path, data_dir: Path, runtime: DockerEnvironmentBroker,
+                     encryption_key: bytes | None = None):
     """Operação offline: serviço parado, destino descartável ou aprovado pelo operador."""
+    if snapshot.is_file():
+        if encryption_key is None:
+            raise BackupError('BACKUP_KEY_REQUIRED')
+        with tempfile.TemporaryDirectory(prefix='aetherdesk-restore-') as temp:
+            extracted = Path(temp) / 'snapshot'
+            unseal_snapshot(snapshot, extracted, encryption_key)
+            return restore_snapshot(extracted, data_dir, runtime)
     manifest = verify_snapshot(snapshot)
     data_dir.mkdir(parents=True, exist_ok=True)
-    for name in ('identity.sqlite3', 'terminals.sqlite3'):
+    for name in ('identity.sqlite3', 'terminals.sqlite3', 'workloads.sqlite3',
+                 'workload-secrets.sqlite3', 'ai.sqlite3', 'broker-nonces.sqlite3'):
         if name in manifest['files']:
             shutil.copy2(snapshot / name, data_dir / name)
     for volume in manifest['volumes']:
-        expected = runtime._names(volume['environment_id'])[1]
+        kind = volume.get('kind', 'account')
+        if kind == 'account':
+            expected = runtime._names(volume['environment_id'])[1]
+            labels = ['--label', f"aetherdesk.account_id={volume['account_id']}",
+                      '--label', f"aetherdesk.environment_id={volume['environment_id']}"]
+        elif kind == 'workload':
+            expected = DockerWorkloadRuntime._names(volume['workload_id'])[1]
+            with closing(sqlite3.connect(data_dir / 'workloads.sqlite3')) as db:
+                row = db.execute('SELECT owner_id FROM workloads WHERE id=?',
+                                 (volume['workload_id'],)).fetchone()
+            if row is None or row[0] != volume['account_id']:
+                raise BackupError('INVALID_WORKLOAD_OWNER')
+            labels = ['--label', f"aetherdesk.owner_id={volume['account_id']}",
+                      '--label', f"aetherdesk.workload_id={volume['workload_id']}"]
+        else:
+            raise BackupError('INVALID_VOLUME_KIND')
         if expected != volume['volume']:
             raise BackupError('INVALID_VOLUME')
-        subprocess.run(['docker', 'volume', 'create', '--label',
-            f"aetherdesk.account_id={volume['account_id']}", '--label',
-            f"aetherdesk.environment_id={volume['environment_id']}", expected],
+        subprocess.run(['docker', 'volume', 'create', *labels, expected],
             check=True, capture_output=True)
         subprocess.run(['docker', 'run', '--rm', '--network', 'none', '--read-only',
             '--user', '0:0', '--mount', f'type=volume,source={expected},target=/data',

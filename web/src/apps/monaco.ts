@@ -1,4 +1,16 @@
-import * as monaco from 'monaco-editor';
+import * as monaco from 'monaco-editor/editor/editor.api';
+import 'monaco-editor/editor/contrib/find/browser/findController';
+import { getTypeScriptWorker } from 'monaco-editor/language/typescript/monaco.contribution';
+import 'monaco-editor/language/json/monaco.contribution';
+import 'monaco-editor/language/css/monaco.contribution';
+import 'monaco-editor/language/html/monaco.contribution';
+import 'monaco-editor/languages/definitions/typescript/register';
+import 'monaco-editor/languages/definitions/javascript/register';
+import 'monaco-editor/languages/definitions/css/register';
+import 'monaco-editor/languages/definitions/html/register';
+import 'monaco-editor/languages/definitions/python/register';
+import 'monaco-editor/languages/definitions/markdown/register';
+import 'monaco-editor/languages/definitions/shell/register';
 import { loader } from '@monaco-editor/react';
 import EditorWorker from 'monaco-editor/editor/editor.worker?worker';
 import JsonWorker from 'monaco-editor/language/json/json.worker?worker';
@@ -16,4 +28,4 @@ self.MonacoEnvironment = {
   },
 };
 loader.config({ monaco });
-export { monaco };
+export { monaco, getTypeScriptWorker };

@@ -13,6 +13,8 @@ from pathlib import Path
 
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
+from apps.AetherDesk.support.migrations import apply_migration
+from apps.AetherDesk.support.lifecycle import LifecycleStore
 
 
 class IdentityError(Exception):
@@ -39,6 +41,18 @@ ADMIN_CAPABILITIES = MEMBER_CAPABILITIES | frozenset({
     "backup.manage", "backup.restore", "environment.manage",
     "sessions.revoke", "sessions.stop",
 })
+OPTIONAL_MEMBER_CAPABILITIES = {
+    'ide': frozenset({'ide.open', 'git.read', 'git.write'}),
+    'workloads': frozenset({'workloads.read', 'workloads.create',
+                            'workloads.deploy', 'workloads.control', 'workloads.secrets',
+                            'workloads.route'}),
+    'ai': frozenset({'ai.chat', 'ai.tools'}),
+}
+OPTIONAL_ADMIN_CAPABILITIES = {
+    'workloads': frozenset({'workloads.control.other'}),
+}
+OPTIONAL_ALL_CAPABILITIES = frozenset().union(*OPTIONAL_MEMBER_CAPABILITIES.values(),
+                                               *OPTIONAL_ADMIN_CAPABILITIES.values())
 
 
 def _now() -> str:
@@ -50,27 +64,53 @@ def _token_hash(token: str) -> str:
 
 
 class IdentityService:
-    def __init__(self, db_path: str | Path, bootstrap_token: str):
+    def __init__(self, db_path: str | Path, bootstrap_token: str,
+                 account_retention_seconds: int | None = None,
+                 enabled_features: frozenset[str] = frozenset(),
+                 kill_deploys: bool = False, safe_mode: bool = False):
         if len(bootstrap_token) < 16:
             raise IdentityError("WEAK_BOOTSTRAP_TOKEN")
+        if account_retention_seconds is not None and (
+            type(account_retention_seconds) is not int or account_retention_seconds < 0
+        ):
+            raise IdentityError('INVALID_RETENTION_POLICY')
         self.db_path = str(db_path)
+        self.account_retention_seconds = account_retention_seconds
+        if not enabled_features.issubset(OPTIONAL_MEMBER_CAPABILITIES):
+            raise IdentityError('INVALID_FEATURE_FLAG')
+        self.enabled_features = enabled_features
+        self.kill_deploys = kill_deploys
+        self.safe_mode = safe_mode
         self._bootstrap_hash = _token_hash(bootstrap_token)
         self._hasher = PasswordHasher(time_cost=3, memory_cost=65536, parallelism=2)
-        with self._connect() as db:
+
+        def migrate_initial(db: sqlite3.Connection):
             version = db.execute("PRAGMA user_version").fetchone()[0]
+            if version > 2:
+                raise IdentityError("UNSUPPORTED_SCHEMA")
             if version == 0:
                 migration = Path(__file__).parent / "migrations" / "001_initial.sql"
-                db.executescript(migration.read_text(encoding="utf-8"))
+                for statement in migration.read_text(encoding="utf-8").split(';'):
+                    if statement.strip():
+                        db.execute(statement)
                 db.execute("PRAGMA user_version=1")
-                version = 1
+
+        def migrate_expiry(db: sqlite3.Connection):
+            version = db.execute("PRAGMA user_version").fetchone()[0]
             if version == 1:
                 migration = Path(__file__).parent / "migrations" / "002_session_expiry.sql"
-                db.executescript(migration.read_text(encoding="utf-8"))
+                for statement in migration.read_text(encoding="utf-8").split(';'):
+                    if statement.strip():
+                        db.execute(statement)
                 # Sessões antigas não tinham validade; migração as expira.
                 db.execute("UPDATE sessions SET expires_at=? WHERE expires_at IS NULL", (_now(),))
                 db.execute("PRAGMA user_version=2")
             elif version != 2:
                 raise IdentityError("UNSUPPORTED_SCHEMA")
+
+        apply_migration(self.db_path, 'identity.initial.v1', migrate_initial)
+        apply_migration(self.db_path, 'identity.session_expiry.v2', migrate_expiry)
+        self.lifecycle = LifecycleStore(self.db_path)
 
     @contextmanager
     def _connect(self):
@@ -160,13 +200,27 @@ class IdentityService:
             if row is None or row["state"] != "active":
                 raise IdentityError("UNAUTHENTICATED")
             caps = set(ADMIN_CAPABILITIES if row["role"] == "admin" else MEMBER_CAPABILITIES)
+            for feature in self.enabled_features:
+                caps.update(OPTIONAL_MEMBER_CAPABILITIES[feature])
+                if row['role'] == 'admin':
+                    caps.update(OPTIONAL_ADMIN_CAPABILITIES.get(feature, ()))
             for override in db.execute("SELECT capability,allowed FROM permission_overrides WHERE account_id=?",
                                        (actor.account_id,)):
                 if override["allowed"]:
                     caps.add(override["capability"])
                 else:
                     caps.discard(override["capability"])
-            return frozenset(caps)
+            enabled = frozenset().union(*(OPTIONAL_MEMBER_CAPABILITIES[feature] |
+                OPTIONAL_ADMIN_CAPABILITIES.get(feature, frozenset()) for feature in self.enabled_features))
+            effective = caps - (OPTIONAL_ALL_CAPABILITIES - enabled)
+            if self.kill_deploys:
+                effective.discard('workloads.deploy')
+            if self.safe_mode:
+                effective -= {'workloads.create', 'workloads.deploy', 'workloads.control',
+                              'workloads.control.other', 'workloads.secrets',
+                              'workloads.build', 'workloads.route', 'ai.chat', 'ai.tools',
+                              'git.remote'}
+            return frozenset(effective)
 
     def _require_active_session(self, actor: ActorContext) -> None:
         with self._connect() as db:
@@ -250,6 +304,9 @@ class IdentityService:
                 db.execute("UPDATE sessions SET revoked_at=? WHERE account_id=? AND revoked_at IS NULL",
                            (_now(), account_id))
                 self._event(db, account_id, "account." + state)
+                if state == 'deleted':
+                    self.lifecycle.record(db, 'account', account_id, account_id,
+                                          self.account_retention_seconds)
             self._audit(db, actor.account_id, "account.update", account_id)
             db.commit()
         return self.account(actor, account_id)
@@ -286,7 +343,7 @@ class IdentityService:
     def set_permission(self, actor: ActorContext, account_id: str, capability: str,
                        allowed: bool) -> None:
         self.require(actor, "permissions.manage")
-        if capability not in ADMIN_CAPABILITIES:
+        if capability not in ADMIN_CAPABILITIES | OPTIONAL_ALL_CAPABILITIES:
             raise IdentityError("INVALID_CAPABILITY")
         with self._connect() as db:
             db.execute("BEGIN IMMEDIATE")

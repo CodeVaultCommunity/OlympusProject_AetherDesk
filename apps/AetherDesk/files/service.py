@@ -55,11 +55,15 @@ def _map_error(exc: OSError) -> FileError:
 
 
 class LinuxFileService:
-    def __init__(self, root: str = "/", max_read_bytes: int = 8 * 1024 * 1024):
+    def __init__(self, root: str = "/", max_read_bytes: int = 8 * 1024 * 1024,
+                 max_list_entries: int = 10_000):
         if os.name != "posix":
             raise FileError("LINUX_REQUIRED")
+        if type(max_list_entries) is not int or max_list_entries < 1:
+            raise FileError("INVALID_REQUEST")
         self.root_fd = os.open(root, os.O_PATH | os.O_DIRECTORY)
         self.max_read_bytes = max_read_bytes
+        self.max_list_entries = max_list_entries
 
     def close(self) -> None:
         os.close(self.root_fd)
@@ -106,6 +110,8 @@ class LinuxFileService:
             result = []
             with os.scandir(fd) as entries:
                 for entry in entries:
+                    if len(result) >= self.max_list_entries:
+                        raise FileError("TOO_LARGE")
                     info = entry.stat(follow_symlinks=False)
                     result.append({"name": entry.name,
                                    "kind": "link" if stat.S_ISLNK(info.st_mode) else

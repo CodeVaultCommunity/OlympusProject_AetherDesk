@@ -1,0 +1,12 @@
+# Imagem de homologação descartável W002; não é artefato de produção.
+FROM python:3.13-slim
+RUN apt-get update && apt-get install -y --no-install-recommends docker-cli git \
+    && rm -rf /var/lib/apt/lists/*
+COPY requirements.txt /tmp/aetherdesk-requirements.txt
+COPY git-askpass /usr/local/bin/aetherdesk-git-askpass
+RUN chmod 0755 /usr/local/bin/aetherdesk-git-askpass
+RUN pip install --no-cache-dir -r /tmp/aetherdesk-requirements.txt httpx httpx2
+RUN groupadd --gid 10001 aetherdesk \
+    && useradd --uid 10001 --gid 10001 --no-create-home --shell /usr/sbin/nologin aetherdesk \
+    && useradd --uid 10002 --gid 10001 --no-create-home --shell /usr/sbin/nologin aetherdesk-broker
+WORKDIR /src

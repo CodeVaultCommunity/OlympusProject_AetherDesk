@@ -2,10 +2,15 @@
   "name": "aetherdesk-web",
   "private": true,
   "version": "0.1.0",
+  "packageManager": "pnpm@11.25.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "build": "tsc --noEmit && vite build"
+    "build": "tsc --noEmit && vite build",
+    "lint": "eslint src",
+    "test": "node --experimental-strip-types --test --test-concurrency=1 tests/*.test.mjs",
+    "test:e2e": "node scripts/run-e2e.mjs",
+    "e2e:browsers": "node scripts/install-e2e-browsers.mjs"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
@@ -16,9 +21,17 @@
     "react-dom": "^19.2.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.65.1",
+    "@testing-library/react": "^16.3.3",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "axe-core": "^4.14.1",
+    "eslint": "^10.15.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "jsdom": "^31.0.1",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.73.0",
     "vite": "^7.3.0"
   }
 }

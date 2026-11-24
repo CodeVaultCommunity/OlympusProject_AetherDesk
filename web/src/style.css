@@ -2,7 +2,7 @@
 
 :root { font-family: 'DM Sans', system-ui, sans-serif; color: #e9eefc; background: #080c1b; font-synthesis: none; }
 * { box-sizing: border-box; }
-body { margin: 0; min-width: 320px; }
+body { margin: 0; min-width: 0; }
 button, input { font: inherit; }
 button { cursor: pointer; }
 .center-state { min-height: 100vh; display: grid; place-items: center; color: #a9b4d4; }
@@ -25,32 +25,101 @@ h1, h2 { font-family: 'Space Grotesk', sans-serif; }
 .spark { color: #98acfb; font-size: 24px; }
 .topbar-divider { height: 18px; width: 1px; background: #6878a0; margin: 0 11px; }
 .workspace-label { color: #a8b5db; font: 500 13px 'DM Sans'; }
-.top-actions { display: flex; align-items: center; gap: 18px; font-size: 12px; color: #a8b5db; }
+.top-actions { display: flex; align-items: center; gap: 18px; font-size: 12px; color: #a8b5db; min-width: 0; max-width: calc(100vw - 180px); overflow-x: auto; white-space: nowrap; scrollbar-width: thin; }
+.top-actions > * { flex-shrink: 0; }
 .sync.saved { color: #91d4b6; }.sync.error,.sync.offline { color: #eeb9aa; }.sync.saving { color: #e6d0a0; }
 .avatar { background: #7f94e9; color: #071531; font-weight: 700; width: 27px; height: 27px; border-radius: 8px; display: grid; place-items: center; }
 .text-button { color: #c6d1ef; background: none; border: 0; padding: 5px; }
 .desktop-background { position: relative; flex: 1; min-height: 0; overflow: hidden; background: radial-gradient(ellipse at 52% 44%, #303b8c 0, #18245c 31%, #0e173f 58%, #0b1230 100%); }
 .desktop-background::before { content: ''; position: absolute; inset: 0; opacity: .35; background-image: radial-gradient(#a9bafd 1px, transparent 1px); background-size: 36px 36px; mask-image: linear-gradient(180deg, #0008, transparent 80%); }
 .desktop-background::after { content: ''; position: absolute; width: 52vw; height: 52vw; top: 8%; left: 24%; border: 1px solid #a4b4ff16; border-radius: 50%; box-shadow: 0 0 0 90px #a4b4ff08, 0 0 0 180px #a4b4ff05; pointer-events: none; }
-.hero { position: absolute; left: 50%; top: 38%; transform: translate(-50%, -50%); text-align: center; color: #dce5ff; user-select: none; }
+.background-solid .desktop-background { background: #24345e; }
+.background-gradient .desktop-background { background: linear-gradient(135deg, #452a67, #194b69 55%, #182d51); }
+.background-gallery .desktop-background { background: radial-gradient(circle at 18% 25%, #ae708f 0, transparent 28%), radial-gradient(circle at 75% 70%, #4278a7 0, transparent 38%), #1b2a53; }
+.background-upload .desktop-background { background-size: cover; background-position: center; }
+.background-solid .desktop-background::before,.background-gradient .desktop-background::before,.background-gallery .desktop-background::before { opacity: .12; }
+.hero { position: absolute; left: 50%; top: 38%; transform: translate(-50%, -50%); text-align: center; color: #dce5ff; user-select: none; pointer-events: none; }
 .hero-emblem { font-size: 86px; color: #9fb2ff; text-shadow: 0 0 60px #8b9efd99; }
 .hero-word { font: 700 clamp(36px, 5vw, 65px) 'Space Grotesk'; letter-spacing: -.05em; }
 .hero p { color: #aab9ec; font-size: 14px; }
-.launchers { position: absolute; top: 45px; left: 30px; display: grid; gap: 11px; z-index: 2; }
-.launcher { width: 104px; min-height: 84px; border: 1px solid transparent; border-radius: 12px; background: transparent; color: #e8eeff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; font-size: 12px; }
+.launchers { position: absolute; top: 45px; bottom: 12px; left: 30px; display: grid; grid-auto-flow: column; grid-template-rows: repeat(auto-fill, 84px); grid-auto-columns: 104px; align-content: start; gap: 11px; max-width: calc(100% - 30px); overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; z-index: 0; }
+.launcher { width: 104px; flex: 0 0 84px; border: 1px solid transparent; border-radius: 12px; background: transparent; color: #e8eeff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; font-size: 12px; }
 .launcher:hover, .launcher:focus-visible { background: #d2ddff1c; border-color: #a7b6ea44; }
 .launcher-icon { width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center; background: linear-gradient(145deg, #7f96e7, #4a65b0); box-shadow: 0 9px 20px #0003; color: #fff; font-size: 26px; }
-.taskbar { height: 63px; background: #0b1230ef; border-top: 1px solid #6677ab55; display: flex; align-items: center; gap: 7px; padding: 0 18px; z-index: 10000; }
+.launcher-icon svg { width: 25px; height: 25px; }
+.taskbar { height: 63px; background: #0b1230ef; border-top: 1px solid #6677ab55; display: flex; align-items: center; gap: 7px; padding: 0 18px; z-index: 10000; min-width: 0; overflow-x: auto; }
 .task-home { width: 43px; height: 43px; border-radius: 12px; border: 0; background: #657fda; color: white; font-size: 25px; }
 .task-separator { width: 1px; height: 28px; background: #65759b; margin: 0 8px; }
 .task-app { border: 1px solid transparent; border-radius: 10px; min-width: 108px; padding: 10px 12px; background: #a9b9f017; color: #c4ceeb; display: flex; align-items: center; gap: 9px; font-size: 12px; }
 .task-app span { font-size: 18px; }.task-app.active { background: #8da3ea36; border-color: #9ab0fa66; color: #fff; }
+.task-app svg { width: 18px; height: 18px; }
 .task-spacer { flex: 1; }.task-clock { font-size: 12px; color: #a7b6dc; padding: 0 10px; }
-.desk-window { position: absolute; display: flex; flex-direction: column; color: var(--text); background: var(--panel); border: 1px solid var(--border); border-radius: 13px; box-shadow: 0 22px 65px #010718a8; overflow: hidden; min-width: 400px; min-height: 260px; }
+.shell-overlay { position: fixed; inset: 0; z-index: 11000; background: #04071688; display: flex; align-items: flex-end; padding: 0 14px 70px; }
+.shell-menu { width: min(440px, calc(100vw - 28px)); max-height: min(620px, calc(100vh - 92px)); overflow-y: auto; border: 1px solid var(--border); border-radius: 16px; background: var(--panel); color: var(--text); box-shadow: 0 30px 80px #0009; padding: 16px; }
+.shell-menu.palette { align-self: flex-start; margin: min(10vh, 80px) auto 0; }
+.shell-menu-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.shell-menu-heading strong { font: 600 20px 'Space Grotesk', sans-serif; }
+.shell-menu-heading button { background: transparent; color: var(--text); border: 0; font-size: 24px; }
+.shell-menu input { width: 100%; padding: 11px 12px; border: 1px solid var(--border); border-radius: 9px; background: #7d8cb224; color: var(--text); }
+.shell-menu-section { margin-top: 17px; }.shell-menu-section > small { display: block; color: var(--muted); margin-bottom: 8px; }
+.shell-app-list { display: grid; gap: 4px; }.shell-app-row { display: flex; align-items: stretch; gap: 4px; }
+.shell-app-row button,.shell-recent button,.shell-background-options button,.launcher-context button { border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--text); }
+.shell-app-row button:hover,.shell-recent button:hover,.shell-background-options button:hover,.launcher-context button:hover { background: #8197eb30; border-color: var(--border); }
+.shell-app-open { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 8px; text-align: left; }
+.shell-app-open svg,.shell-recent svg { width: 22px; height: 22px; flex: none; }
+.shell-app-open span { display: grid; }.shell-app-open small { color: var(--muted); font-size: 11px; }.shell-pin { width: 38px; }
+.shell-recent,.shell-background-options { display: flex; flex-wrap: wrap; gap: 5px; }
+.shell-recent button { display: flex; align-items: center; gap: 6px; padding: 7px 8px; }
+.shell-background-options button { padding: 7px 10px; border-color: var(--border); }
+.shell-background-options button[aria-pressed=true] { background: #8197eb55; }
+.shell-upload { display: block; margin-top: 12px; color: var(--muted); font-size: 12px; }
+.shell-upload input { display: block; margin-top: 7px; font-size: 11px; padding: 7px; }
+.shell-upload-error { color: #ffb6bc; font-size: 12px; }
+.shell-reset { margin-top: 18px; padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: var(--text); }
+.shell-confirm { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 12000; width: min(360px, calc(100vw - 24px)); padding: 20px; border: 1px solid var(--border); border-radius: 12px; background: var(--panel); color: var(--text); box-shadow: 0 30px 80px #000a; }
+.shell-confirm p { color: var(--muted); font-size: 13px; line-height: 1.5; }.shell-confirm > div { display: flex; justify-content: flex-end; gap: 8px; }
+.shell-confirm button { padding: 8px 11px; border: 1px solid var(--border); border-radius: 8px; background: #8197eb32; color: var(--text); }
+.launcher-context { position: fixed; z-index: 10500; min-width: 155px; padding: 5px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel); box-shadow: 0 15px 40px #0008; display: grid; }
+.launcher-context button { text-align: left; padding: 8px 10px; }
+.desk-window { position: absolute; display: flex; flex-direction: column; color: var(--text); background: var(--panel); border: 1px solid var(--border); border-radius: 13px; box-shadow: 0 22px 65px #010718a8; overflow: hidden; min-width: 0; min-height: 0; box-sizing: border-box; }
 .desk-window.window-active { border-color: #a6b8fa9e; box-shadow: 0 24px 70px #010718c0, 0 0 0 1px #b3c1ff29; }
 .window-titlebar { height: 42px; flex-shrink: 0; display: flex; align-items: center; gap: 10px; padding: 0 0 0 15px; background: #7489c21d; border-bottom: 1px solid var(--border); touch-action: none; cursor: move; user-select: none; }
-.window-app-icon { color: #b0bfff; font-size: 19px; }.window-titlebar strong { font-size: 12px; font-weight: 600; }
-.window-controls { display: flex; margin-left: auto; height: 100%; }.window-controls button { width: 42px; border: 0; background: transparent; color: var(--muted); font-size: 17px; }.window-controls button:hover { background: #8093d23d; color: var(--text); }.window-controls button:last-child:hover { background: #b84f65; color: white; }
+.window-app-icon { color: #b0bfff; font-size: 19px; }.window-titlebar strong { font-size: 12px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.window-app-icon svg { display: block; width: 19px; height: 19px; }
+.window-controls { display: flex; margin-left: auto; height: 100%; flex-shrink: 0; }.window-controls button { width: 42px; border: 0; background: transparent; color: var(--muted); font-size: 17px; }.window-controls button:hover { background: #8093d23d; color: var(--text); }.window-controls button:last-child:hover { background: #b84f65; color: white; }
 .window-body { flex: 1; min-height: 0; display: block; overflow: hidden; }.window-body > * { width: 100%; height: 100%; }.empty-app { text-align: center; color: var(--muted); }.empty-app-icon { width: 64px; height: 64px; border-radius: 19px; background: #859bf128; color: #b4c4ff; display: grid; place-items: center; font-size: 38px; margin: 0 auto 14px; }.empty-app h2 { color: var(--text); font-size: 20px; margin: 0 0 5px; }.empty-app p { margin: 0; font-size: 13px; }.app-status { display: inline-flex; align-items: center; gap: 7px; margin-top: 22px; border-radius: 20px; padding: 7px 12px; background: #8499d21b; font-size: 11px; }.app-status span { width: 6px; height: 6px; border-radius: 50%; background: #e7c989; }
 .resize-corner { position: absolute; width: 16px; height: 16px; right: 0; bottom: 0; cursor: nwse-resize; touch-action: none; user-select: none; }
-@media (max-width: 700px) { .topbar { padding: 0 12px; }.workspace-label,.topbar-divider,.sync { display: none; }.launchers { top: 20px; left: 9px; grid-template-columns: repeat(3, 88px); gap: 4px; }.launcher { width: 88px; }.hero { top: 61%; }.task-app { min-width: 38px; font-size: 0; padding: 8px; }.task-app span { font-size: 20px; }.desk-window { max-width: 100vw; }.taskbar { gap: 3px; padding: 0 8px; } }
+.app-failure { height: 100%; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; color: var(--text); padding: 20px; text-align: center; }
+.app-failure button { border: 1px solid var(--border); background: var(--panel); color: var(--text); border-radius: 8px; padding: 8px 12px; }
+.desktop.light { color: #243251; background: #eaf0ff; }
+.desktop.light .topbar { background: #f7f9ffec; border-color: #bec9e2; color: #26365c; }
+.desktop.light .workspace-label,.desktop.light .top-actions,.desktop.light .text-button { color: #4e5d7d; }
+.desktop.light .topbar-divider,.desktop.light .task-separator { background: #a8b5d0; }
+.desktop.light .desktop-background { background: radial-gradient(ellipse at 52% 44%, #d5e0ff 0, #e8efff 48%, #f6f8ff 100%); }
+.desktop.light .desktop-background::before { opacity: .15; }
+.desktop.light .hero,.desktop.light .hero p { color: #45577e; }
+.desktop.light .hero-emblem { color: #7288cd; text-shadow: none; }
+.desktop.light .launcher { color: #26365c; }
+.desktop.light .launcher:hover,.desktop.light .launcher:focus-visible { background: #b9c8f052; border-color: #8498cf88; }
+.desktop.light .taskbar { background: #f7f9ffed; border-color: #bec9e2; }
+.desktop.light .task-app { background: #dce5fa; color: #445577; }
+.desktop.light .task-app.active { background: #b7c8f6; border-color: #8299d7; color: #172b5e; }
+.desktop.light .task-clock { color: #526383; }
+.desktop.light .window-titlebar { background: #dbe4f7; }
+.desktop.light .window-app-icon { color: #536bb2; }
+.desktop.light .window-controls button { color: #405277; }
+.desktop.light .window-controls button:hover { background: #c3d0ec; }
+.desktop.light .sync.saved { color: #176b4d; }
+.desktop.light .sync.error,.desktop.light .sync.offline,.desktop.light .sync.conflict { color: #a13539; }
+.desktop.light .admin-app,.desktop.light .files-app,.desktop.light .monitor-app,.desktop.light .terminal-app { background: #f8faff; color: #243251; }
+.desktop.light .admin-app header,.desktop.light .admin-layout aside,.desktop.light .admin-session,.desktop.light .audit-row,.desktop.light .files-toolbar,.desktop.light .files-list,.desktop.light .editor-tabs,.desktop.light .files-status,.desktop.light .terminal-toolbar,.desktop.light .terminal-tabs,.desktop.light .monitor-app nav { border-color: #c8d2e8; }
+.desktop.light .admin-app header span,.desktop.light .admin-layout aside small,.desktop.light .admin-layout main p,.desktop.light .path-label,.desktop.light .file-size,.desktop.light .editor-actions span,.desktop.light .files-status,.desktop.light .terminal-toolbar span,.desktop.light .terminal-empty,.desktop.light .monitor-app nav span,.desktop.light .metric-card small,.desktop.light .metric-state { color: #536484; }
+.desktop.light .admin-app button,.desktop.light .admin-app select,.desktop.light .admin-app input:not([type=checkbox]),.desktop.light .files-toolbar button,.desktop.light .editor-actions button,.desktop.light .open-path button,.desktop.light .open-path input,.desktop.light .terminal-toolbar button,.desktop.light .terminal-tabs button,.desktop.light .monitor-app nav button { background: #e7edfb; border-color: #aabbdc; color: #243251; }
+.desktop.light .admin-layout aside button.selected,.desktop.light .editor-tabs button.selected,.desktop.light .terminal-tabs button.selected,.desktop.light .monitor-app nav button.active { background: #c9d9f6; border-color: #7c9ace; color: #1c355f; }
+.desktop.light .file-row:hover { background: #dce7fa; }
+.desktop.light .file-name span { color: #4768ad; }
+.desktop.light .editor-empty { color: #526687; }
+.desktop.light .file-conflict { background: #fff0e9; color: #8c3a21; }
+.desktop.light .metric-card { background: #edf3fd; border-color: #c0cde3; }
+@media (max-width: 700px) { .topbar { padding: 0 12px; }.top-actions { max-width: calc(100vw - 150px); }.workspace-label,.topbar-divider { display: none; }.sync { display: inline-flex; width: 12px; height: 12px; border-radius: 50%; background: currentColor; font-size: 0; overflow: hidden; }.launchers { top: 20px; left: 9px; gap: 4px; grid-auto-columns: 88px; max-width: calc(100% - 9px); }.launcher { width: 88px; }.hero { top: 61%; }.task-app { min-width: 38px; font-size: 0; padding: 8px; }.task-app span { font-size: 20px; }.desk-window { max-width: 100vw; }.taskbar { gap: 3px; padding: 0 8px; } }
+@media (max-width: 300px) { .topbrand { font-size: 0; }.topbrand .spark { font-size: 24px; }.top-actions { gap: 8px; max-width: calc(100vw - 55px); }.task-clock { display: none; }.task-home,.task-app { flex-shrink: 0; } }

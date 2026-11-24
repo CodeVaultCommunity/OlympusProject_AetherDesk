@@ -1,0 +1,31 @@
+[Unit]
+Description=AetherDesk restricted Docker broker
+Wants=network-online.target
+After=network-online.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=aetherdesk-broker
+Group=aetherdesk
+SupplementaryGroups=docker
+WorkingDirectory=/opt/aetherdesk
+EnvironmentFile=/etc/aetherdesk/aetherdesk.env
+Environment=PYTHONUNBUFFERED=1
+Environment=AETHERDESK_BROKER_SOCKET=/run/aetherdesk-broker/broker.sock
+RuntimeDirectory=aetherdesk-broker
+RuntimeDirectoryMode=0710
+LogsDirectory=aetherdesk-broker
+LogsDirectoryMode=0700
+ExecStart=/opt/aetherdesk/.venv/bin/python -m apps.AetherDesk.runtime.broker_main
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/aetherdesk /var/backups/aetherdesk /run/aetherdesk-broker /var/log/aetherdesk-broker
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
