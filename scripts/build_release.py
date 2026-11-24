@@ -48,17 +48,21 @@ def license_index() -> dict[tuple[str, str], str]:
 
 def npm_license(name: str, version: str, installed: dict[tuple[str, str], str]) -> tuple[str, str | None]:
     declared = installed.get((name, version))
-    if declared:
-        return declared, None
     # Binários opcionais são publicados com a mesma licença do pacote-fonte
     # na versão exata. Metadados upstream: github.com/evanw/esbuild e
     # github.com/rollup/rollup (diretórios npm/ da plataforma).
     for prefix, parent in (('@esbuild/', 'esbuild'), ('@rollup/rollup-', 'rollup')):
         if name.startswith(prefix) and installed.get((parent, version)) == 'MIT':
+            if declared and declared != 'MIT':
+                raise RuntimeError(f'Licença opcional divergente: {name}@{version}: {declared}')
             return 'MIT', f'Licença do pacote-fonte {parent}@{version} (mesma versão)'
     # Metadados do pacote oficial: github.com/fsevents/fsevents/blob/master/package.json
     if name == 'fsevents' and version == '2.3.3':
+        if declared and declared != 'MIT':
+            raise RuntimeError(f'Licença opcional divergente: {name}@{version}: {declared}')
         return 'MIT', 'Licença declarada nos metadados upstream de fsevents@2.3.3'
+    if declared:
+        return declared, None
     return 'NOASSERTION', None
 
 
@@ -136,17 +140,18 @@ def build(output: Path) -> dict:
     manifest_bytes = (json.dumps(manifest, sort_keys=True, indent=2) + '\n').encode()
     bom_bytes = (json.dumps(bom, sort_keys=True, indent=2) + '\n').encode()
     archive = output / 'aetherdesk-candidate.zip'
-    with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED,
-                         compresslevel=9, strict_timestamps=True) as package:
+    # ZIP_STORED keeps archive bytes stable across different zlib implementations.
+    with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_STORED,
+                         strict_timestamps=True) as package:
         for name, data in sorted({**{path.relative_to(ROOT).as_posix(): path.read_bytes()
                                          for path in source},
                                   'release/manifest.json': manifest_bytes,
                                   'release/sbom.spdx.json': bom_bytes}.items()):
             info = zipfile.ZipInfo(name, (1980, 1, 1, 0, 0, 0))
-            info.compress_type = zipfile.ZIP_DEFLATED
+            info.create_system = 3  # Unix header on every builder platform.
+            info.compress_type = zipfile.ZIP_STORED
             info.external_attr = 0o644 << 16
-            package.writestr(info, data, compress_type=zipfile.ZIP_DEFLATED,
-                             compresslevel=9)
+            package.writestr(info, data)
     (output / 'manifest.json').write_bytes(manifest_bytes)
     (output / 'sbom.spdx.json').write_bytes(bom_bytes)
     archive_hash = digest(archive.read_bytes())
