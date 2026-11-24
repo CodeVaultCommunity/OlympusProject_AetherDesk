@@ -42,6 +42,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build disposable runtime chain
         run: |
+          docker pull python:3.13-slim
           docker build -f apps/AetherDesk/runtime/Dockerfile -t aetherdesk-runtime:w002 .
           docker build -f apps/AetherDesk/terminal/Dockerfile -t aetherdesk-terminal:w003 .
           docker build -f apps/AetherDesk/files/Dockerfile -t aetherdesk-files:w003 .
